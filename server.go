@@ -5,6 +5,7 @@ import (
 	"net"
 	"yar/packager"
 	"yar/transports"
+	"fmt"
 )
 
 type Server struct {
@@ -115,6 +116,8 @@ func (self *Server) handler(conn net.Conn) {
 		}
 	}
 
+	fmt.Printf("%s\n",body_buffer)
+	fmt.Println(body_buffer)
 	err = packager.Unpack(protocol.Packager[0:], body_buffer, &request)
 
 	if err != nil {
@@ -124,12 +127,12 @@ func (self *Server) handler(conn net.Conn) {
 	}
 
 	request.Protocol = protocol
+	request.Id = request.Protocol.Id
 	handler = self.handler_list[request.Method]
 	response.Id = request.Id
 	response.Protocol = protocol
 
 	if nil == handler {
-
 		response.Status = ERR_PROTOCOL
 		response.Error = "undefined api:" + request.Method
 		goto send
@@ -139,7 +142,7 @@ func (self *Server) handler(conn net.Conn) {
 
 send:
 
-	ret, _ := packager.Pack(protocol.Packager[0:], response)
+	ret, err := packager.Pack(protocol.Packager[0:], response)
 
 	protocol.BodyLength = uint32(len(ret) + 8)
 	send_protocol := protocol.Bytes()

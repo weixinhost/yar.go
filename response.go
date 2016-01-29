@@ -6,7 +6,7 @@ import (
 
 type Response struct {
 	Protocol *Protocol     	`json:"-" msgpack:"-"`
-	Id       int64         	`json:"i" msgpack:"i"`
+	Id       uint32         	`json:"i" msgpack:"i"`
 	Error    string        	`json:"e" msgpack:"e"`
 	Out   	 string        	`json:"o" msgpack:"o"`
 	Status   ErrorType 		`json:"s" msgpack:"s"`

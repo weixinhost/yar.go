@@ -12,6 +12,12 @@ const (
 type ErrorType int
 
 const (
+
+	MAGIC_NUMBER = 0x80DFEC60
+
+)
+
+const (
 	ERR_OKEY           ErrorType = 0x0
 	ERR_PACKAGER       ErrorType = 0x1
 	ERR_PROTOCOL       ErrorType = 0x2
@@ -26,7 +32,7 @@ const (
 type Protocol struct {
 	Id           uint32
 	Version      uint16
-	MagickNumber uint32
+	MagicNumber uint32
 	Reserved     uint32
 	Provider     [32]byte
 	Token        [32]byte
@@ -55,7 +61,7 @@ func (self *Protocol) Init(payload *bytes.Buffer) bool {
 
 	binary.Read(payload, binary.BigEndian, &self.Id)
 	binary.Read(payload, binary.BigEndian, &self.Version)
-	binary.Read(payload, binary.BigEndian, &self.MagickNumber)
+	binary.Read(payload, binary.BigEndian, &self.MagicNumber)
 	binary.Read(payload, binary.BigEndian, &self.Reserved)
 	binary.Read(payload, binary.BigEndian, &self.Provider)
 	binary.Read(payload, binary.BigEndian, &self.Token)
