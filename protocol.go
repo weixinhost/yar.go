@@ -67,13 +67,10 @@ func (self *Protocol) Init(payload *bytes.Buffer) bool {
 func (self *Protocol) Bytes() *bytes.Buffer {
 
 	buffer := new(bytes.Buffer)
-
 	err := binary.Write(buffer, binary.BigEndian, self)
 
 	if err != nil {
 		return nil
 	}
-
 	return buffer
-
 }
