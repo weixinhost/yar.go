@@ -6,52 +6,82 @@ import (
 )
 
 
+const (
+
+	PROTOCOL_LENGTH = 90
+)
+
+
+type ExceptionType int
+
+const (
+
+	ERR_OKEY  			ExceptionType = 0x0
+	ERR_PACKAGER		ExceptionType = 0x1
+	ERR_PROTOCOL		ExceptionType = 0x2
+	ERR_REQUEST			ExceptionType = 0x4
+	ERR_OUTPUT			ExceptionType = 0x8
+	ERR_TRANSPORT		ExceptionType = 0x10
+	ERR_FORBIDDEN		ExceptionType = 0x20
+	ERR_EXCEPTION		ExceptionType = 0x40
+	ERR_EMPTY_RESPONSE	ExceptionType = 0x80
+
+)
+
 type Protocol struct {
-	
-	id 			uint32
-	version		uint16
-	magic_num	uint32
-	reserved   	uint32
-	provider 	[32]byte
-	token      	[32]byte
-	body_len 	uint32 		
-	
+
+	Id 				uint32
+	Version			uint16
+	MagickNumber	uint32
+	Reserved   		uint32
+	Provider 		[32]byte
+	Token      		[32]byte
+	BodyLength 		uint32
+	Packager 		[8]byte
 }
 
-func ProtocolNew() *Protocol {
-	
+func NewProtocol() *Protocol {
+
 	proto := new(Protocol)
-	
+
 	return proto
-	
+
+}
+
+func NewProtocolWithBytes(payload *bytes.Buffer) *Protocol {
+
+	p := NewProtocol()
+
+	p.Init(payload)
+
+	return p
 }
 
 
 func (self *Protocol)Init(payload *bytes.Buffer) bool {
-	
-	binary.Read(payload,binary.LittleEndian,&self.id)
-	binary.Read(payload,binary.LittleEndian,&self.version)
-	binary.Read(payload,binary.LittleEndian,&self.magic_num)
-	binary.Read(payload,binary.LittleEndian,&self.reserved)
-	binary.Read(payload,binary.LittleEndian,&self.provider)
-	binary.Read(payload,binary.LittleEndian,&self.token)
-	binary.Read(payload,binary.LittleEndian,&self.body_len)
-		
+
+	binary.Read(payload,binary.BigEndian,&self.Id)
+	binary.Read(payload,binary.BigEndian,&self.Version)
+	binary.Read(payload,binary.BigEndian,&self.MagickNumber)
+	binary.Read(payload,binary.BigEndian,&self.Reserved)
+	binary.Read(payload,binary.BigEndian,&self.Provider)
+	binary.Read(payload,binary.BigEndian,&self.Token)
+	binary.Read(payload,binary.BigEndian,&self.BodyLength)
+	binary.Read(payload,binary.BigEndian,&self.Packager)
 	return true
 }
 
 
 func (self *Protocol) Bytes() *bytes.Buffer {
-	
+
 	buffer := new(bytes.Buffer)
-	
-	err := binary.Write(buffer, binary.LittleEndian, self)
-	
+
+	err := binary.Write(buffer, binary.BigEndian, self)
+
 	if err != nil {
 		return nil
 	}
-	
-	return buffer
-	
-}
 
+	return buffer
+
+}

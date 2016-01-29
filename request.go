@@ -1,24 +1,9 @@
 package yar
 
 type Request struct {
-
-	protocol 	*Protocol
-
-	id 		    uint32
-
-	method 		string
-
-	params 		interface{}
-
+	Protocol *Protocol `json:"-" msgpack:"-"`
+	Id     int64       `json:"i" msgpack:"i"`
+	Method string      `json:"m" msgpack:"m"`
+	Params interface{} `json:"p" msgpack:"p"`
 }
-
-func RequestNew() *Request {
-
-	request := new(Request)
-
-	return request;
-
-}
-
-
 

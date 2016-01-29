@@ -1,46 +1,47 @@
-package yar
-
+package packager
 import (
 	"strings"
-	"bytes"
 	"errors"
 )
 
-type Packager interface {
+type PackFunc func (v interface{}) ([]byte,error)
 
-	Pack(data map[string]interface{}) *bytes.Buffer
-	Unpack(data *bytes.Buffer)  map[string]interface{}
-
-}
+type UnpackFunc func (data []byte,v interface{}) error
 
 
-func PackagerNew(packagerName string)  ( Packager, error){
-		
-	switch strings.ToLower(packagerName)  {
-	
-		case "json" : 
-			
-			ret := JsonPackagerNew()
-			
-			var err error = nil
+func Pack(name string,v interface {}) ([]byte,error) {
 
-			return  ret,err
-		
-		break
-		
-		case "msgpack" :
-		break	
+	switch strings.ToLower(name) {
+
+	case "json" : {
+
+		return JsonPack(v)
+
 	}
-	
-	var ret Packager = nil
-	
-	var err error = errors.New("Unsupported Packager")
+		break;
+	case "msgpack" : {}
+		break;
+	}
 
-	return ret,err
-	 
+	return nil,errors.New("unsupported packager")
 }
 
 
+func Unpack(name string,data []byte,v interface{}) error {
 
+	switch strings.ToLower(name) {
 
+	case "json" : {
+
+		return JsonUnpack(data,v)
+
+	}
+		break;
+
+	case "msgpack":{}
+		break;
+	}
+
+	return errors.New("unsupported packager")
+}
 
