@@ -5,7 +5,6 @@ import (
 	"net"
 	"yar/packager"
 	"yar/transports"
-	"fmt"
 )
 
 type Server struct {
@@ -116,8 +115,6 @@ func (self *Server) handler(conn net.Conn) {
 		}
 	}
 
-	fmt.Printf("%s\n",body_buffer)
-	fmt.Println(body_buffer)
 	err = packager.Unpack(protocol.Packager[0:], body_buffer, &request)
 
 	if err != nil {
