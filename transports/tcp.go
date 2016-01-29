@@ -1,4 +1,5 @@
 package transports
+
 import (
 	"net"
 	"os"
@@ -9,28 +10,26 @@ const (
 )
 
 type Tcp struct {
-
 	listener net.Listener
 
 	handler ConnectionHandler
 
 	running bool
-
 }
 
-func defaultHandler(conn net.Conn){
+func defaultHandler(conn net.Conn) {
 
 	conn.Close()
 }
 
-func NewTcp(host string,port string) (*Tcp,error) {
+func NewTcp(host string, port string) (*Tcp, error) {
 
-	tcp := new(Tcp);
+	tcp := new(Tcp)
 
-	listener,err := net.Listen(NetMode,host + ":" + port)
+	listener, err := net.Listen(NetMode, host+":"+port)
 
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	tcp.listener = listener
@@ -39,15 +38,15 @@ func NewTcp(host string,port string) (*Tcp,error) {
 
 	tcp.running = true
 
-	return tcp,nil
+	return tcp, nil
 }
 
-func (self *Tcp)OnConnection(handler ConnectionHandler) {
+func (self *Tcp) OnConnection(handler ConnectionHandler) {
 
 	self.handler = handler
 }
 
-func (self *Tcp)Run() {
+func (self *Tcp) Run() {
 
 	defer self.listener.Close()
 
@@ -55,11 +54,11 @@ func (self *Tcp)Run() {
 
 		if self.running == false {
 
-			break;
+			break
 
 		}
 
-		conn,err := self.listener.Accept()
+		conn, err := self.listener.Accept()
 
 		if err != nil {
 
@@ -73,22 +72,22 @@ func (self *Tcp)Run() {
 
 }
 
-func (self *Tcp)Read(conn  net.Conn,buffer []byte)(len int,err error){
+func (self *Tcp) Read(conn net.Conn, buffer []byte) (len int, err error) {
 
-	len,err = conn.Read(buffer)
+	len, err = conn.Read(buffer)
 
-	return len,err
+	return len, err
 
 }
 
-func (self *Tcp)Write(conn net.Conn,buffer []byte)(real_len int,err error){
+func (self *Tcp) Write(conn net.Conn, buffer []byte) (real_len int, err error) {
 
-	real_len,err = conn.Write(buffer)
+	real_len, err = conn.Write(buffer)
 
-	return real_len,err
+	return real_len, err
 }
 
-func (self *Tcp)Stop() {
+func (self *Tcp) Stop() {
 
 	self.running = false
 

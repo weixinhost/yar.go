@@ -2,17 +2,17 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"log"
 	"os"
 	"runtime/pprof"
-	"log"
 	"time"
-	"fmt"
 )
 
 func test() {
 
 	time.Sleep(10000)
-	fmt.Printf("%s","hello")
+	fmt.Printf("%s", "hello")
 }
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
@@ -30,11 +30,10 @@ func main() {
 
 	}
 
-	for i:=0;i<1000000;i++ {
+	for i := 0; i < 1000000; i++ {
 
 		test()
 
 	}
-
 
 }

@@ -1,14 +1,21 @@
 package main
+
 import (
-	"yar"
-	"runtime/pprof"
 	"flag"
 	"os"
+	"runtime/pprof"
+	"yar"
+	"fmt"
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 
-func main(){
+func test_action(request *yar.Request,response *yar.Response) {
+
+	fmt.Printf("%s","hello,world");
+}
+
+func main() {
 
 	flag.Parse()
 
@@ -24,5 +31,8 @@ func main(){
 	}
 
 	server := yar.NewServer()
+
+	server.RegisterHandler("test",test_action)
+
 	server.Run()
 }

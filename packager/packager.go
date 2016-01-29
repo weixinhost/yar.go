@@ -1,47 +1,49 @@
 package packager
+
 import (
-	"strings"
 	"errors"
+	"strings"
+	//"bytes"
+	"bytes"
 )
 
-type PackFunc func (v interface{}) ([]byte,error)
+type PackFunc func(v interface{}) ([]byte, error)
 
-type UnpackFunc func (data []byte,v interface{}) error
+type UnpackFunc func(data []byte, v interface{}) error
 
+func Pack(name []byte ,v interface{}) ([]byte, error) {
 
-func Pack(name string,v interface {}) ([]byte,error) {
+	switch strings.ToLower(bytes.NewBuffer(name).String()) {
 
-	switch strings.ToLower(name) {
-
-	case "json" : {
-
-		return JsonPack(v)
-
+	case "json":
+		{
+			return JsonPack(v)
+		}
+		break
+	case "msgpack":
+		{
+		}
+		break
 	}
-		break;
-	case "msgpack" : {}
-		break;
-	}
 
-	return nil,errors.New("unsupported packager")
+	return nil, errors.New("unsupported packager")
 }
 
+func Unpack(name []byte, data []byte, v interface{}) error {
 
-func Unpack(name string,data []byte,v interface{}) error {
+	switch strings.ToLower(bytes.NewBuffer(name).String()) {
 
-	switch strings.ToLower(name) {
+	case "json":
+		{
+			return JsonUnpack(data, v)
+		}
+		break
 
-	case "json" : {
-
-		return JsonUnpack(data,v)
-
-	}
-		break;
-
-	case "msgpack":{}
-		break;
+	case "msgpack":
+		{
+		}
+		break
 	}
 
 	return errors.New("unsupported packager")
 }
-
