@@ -9,18 +9,18 @@ const (
 	PROTOCOL_LENGTH = 90
 )
 
-type ExceptionType int
+type ErrorType int
 
 const (
-	ERR_OKEY           ExceptionType = 0x0
-	ERR_PACKAGER       ExceptionType = 0x1
-	ERR_PROTOCOL       ExceptionType = 0x2
-	ERR_REQUEST        ExceptionType = 0x4
-	ERR_OUTPUT         ExceptionType = 0x8
-	ERR_TRANSPORT      ExceptionType = 0x10
-	ERR_FORBIDDEN      ExceptionType = 0x20
-	ERR_EXCEPTION      ExceptionType = 0x40
-	ERR_EMPTY_RESPONSE ExceptionType = 0x80
+	ERR_OKEY           ErrorType = 0x0
+	ERR_PACKAGER       ErrorType = 0x1
+	ERR_PROTOCOL       ErrorType = 0x2
+	ERR_REQUEST        ErrorType = 0x4
+	ERR_OUTPUT         ErrorType = 0x8
+	ERR_TRANSPORT      ErrorType = 0x10
+	ERR_FORBIDDEN      ErrorType = 0x20
+	ERR_EXCEPTION      ErrorType = 0x40
+	ERR_EMPTY_RESPONSE ErrorType = 0x80
 )
 
 type Protocol struct {

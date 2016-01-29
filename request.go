@@ -6,3 +6,10 @@ type Request struct {
 	Method   string      `json:"m" msgpack:"m"`
 	Params   interface{} `json:"p" msgpack:"p"`
 }
+
+
+func (self *Request)getParam(index int,v interface{}) {
+
+
+
+}

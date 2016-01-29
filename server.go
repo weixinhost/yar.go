@@ -8,19 +8,29 @@ import (
 )
 
 type Server struct {
+
 	handler_list map[string]Handler
+
+	opt map[string]interface{}
 
 	transport transports.Transport
 }
 
 var CONNECTION_TOTAL = 0
 
-func NewServer() *Server {
+func NewServer(host string,port int) *Server {
 
 	s := new(Server)
 
 	s.handler_list = make(map[string]Handler)
 
+	tran, err := transports.NewTcp(host, port)
+
+	if err != nil {
+		panic(err)
+	}
+
+	s.transport = tran
 	return s
 
 }
@@ -105,7 +115,6 @@ func (self *Server) handler(conn net.Conn) {
 		}
 	}
 
-
 	err = packager.Unpack(protocol.Packager[0:], body_buffer, &request)
 
 	if err != nil {
@@ -120,10 +129,9 @@ func (self *Server) handler(conn net.Conn) {
 	response.Protocol = protocol
 
 	if nil == handler {
+
 		response.Status = ERR_PROTOCOL
 		response.Error = "undefined api:" + request.Method
-		response.Output = response.Error
-
 		goto send
 	}
 
@@ -131,7 +139,8 @@ func (self *Server) handler(conn net.Conn) {
 
 send:
 
-	ret, _ := packager.Pack(protocol.Packager[0:], &response)
+	ret, _ := packager.Pack(protocol.Packager[0:], response)
+
 	protocol.BodyLength = uint32(len(ret) + 8)
 	send_protocol := protocol.Bytes()
 	self.transport.Write(conn, send_protocol.Bytes())
@@ -142,10 +151,7 @@ send:
 
 func (self *Server) Run() {
 
-	tran, _ := transports.NewTcp("0.0.0.0", "6789")
-
-	defer tran.Stop()
-	self.transport = tran
+	defer self.transport.Stop()
 	self.transport.OnConnection(self.handler)
 	self.transport.Run()
 

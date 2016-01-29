@@ -3,6 +3,7 @@ package transports
 import (
 	"net"
 	"os"
+	"fmt"
 )
 
 const (
@@ -22,11 +23,13 @@ func defaultHandler(conn net.Conn) {
 	conn.Close()
 }
 
-func NewTcp(host string, port string) (*Tcp, error) {
+func NewTcp(host string, port int) (*Tcp, error) {
 
 	tcp := new(Tcp)
 
-	listener, err := net.Listen(NetMode, host+":"+port)
+	hostname := fmt.Sprintf("%s:%d",host,port)
+
+	listener, err := net.Listen(NetMode, hostname)
 
 	if err != nil {
 		return nil, err
