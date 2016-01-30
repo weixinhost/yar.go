@@ -1,13 +1,13 @@
 package main
 import (
 	"yar"
-	"fmt"
 )
 
-func test_action(request *yar.Request, response *yar.Response) {
+func test_action(int_num int,float_num float32,str string)(string) {
 
-	fmt.Printf("%s", "hello,world")
-	response.Return("abcdefgh")
+
+	return "abcdefghj"
+
 }
 
 func main() {

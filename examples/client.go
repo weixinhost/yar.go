@@ -16,7 +16,7 @@ func main(){
 
 	var ret string
 
-	err = client.Call("test",&ret)
+	err = client.Call("test",&ret,123,1.23,"abcdefg")
 
 	fmt.Println(ret)
 	fmt.Println(err)

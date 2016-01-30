@@ -5,6 +5,7 @@ import (
 	"net"
 	"yar/packager"
 	"yar/transports"
+	"reflect"
 )
 
 type Server struct {
@@ -84,6 +85,10 @@ func (self *Server) handler(conn net.Conn) {
 	var read_total int
 	var body_buffer []byte
 	var handler Handler = nil
+	var fv reflect.Value
+	var call_params []interface{}
+	var real_params []reflect.Value
+	var rs []reflect.Value
 
 	response := new(Response)
 	request := new(Request)
@@ -135,7 +140,38 @@ func (self *Server) handler(conn net.Conn) {
 		goto send
 	}
 
-	handler(request,response)
+	fv = reflect.ValueOf(handler)
+
+	call_params = request.Params.([]interface{})
+
+	real_params = make([]reflect.Value,len(call_params))
+
+	for i, v := range call_params {
+
+		raw_val := reflect.ValueOf(v)
+
+		real_params[i] = raw_val.Convert(fv.Type().In(i))
+
+	}
+
+	rs = fv.Call(real_params)
+
+	if(len(rs) < 1){
+
+		response.Return(nil)
+
+		goto send
+	}
+
+	if (len(rs) > 1){
+
+		response.Error = "Not Supported Multi Return Values";
+		response.Status = ERR_OUTPUT
+		goto send
+	}
+
+
+	response.Return(rs[0].Interface())
 
 send:
 
