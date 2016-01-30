@@ -11,6 +11,7 @@ const (
 )
 
 type Tcp struct {
+
 	listener net.Listener
 
 	handler ConnectionHandler
