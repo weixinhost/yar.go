@@ -4,6 +4,11 @@ import (
 	"yar"
 )
 
+type UUidResponse struct {
+
+	Uuid float64		`json:"uuid"`
+}
+
 func main(){
 
 	client ,err := yar.NewClientWithTcp("127.0.0.1",6790)
@@ -13,9 +18,18 @@ func main(){
 		return
 	}
 
-	var ret map[string]uint64
-	err = client.Call("uuid",&ret,1)
+	ret := new(UUidResponse)
+
+	err = client.Call("uuid",&ret)
+
+	if err != nil {
+
+		fmt.Println(err)
+
+		return ;
+	}
+
 	fmt.Println(ret)
-	fmt.Println(err)
+
 }
 

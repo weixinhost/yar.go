@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"yar/packager"
 	"yar/transports"
+	"encoding/gob"
 )
 
 type Opt int
@@ -72,7 +73,7 @@ func (self *Client) SetOpt(opt Opt, v interface{}) bool {
 	return false
 }
 
-func (self *Client) tcpCall(method string, ret interface{}, params ...interface{}) (err error) {
+func (self *Client) tcpCall(method string,ret interface{},params ...interface{}) (err error) {
 
 	if params != nil {
 		self.request.Params = params
@@ -123,22 +124,48 @@ func (self *Client) tcpCall(method string, ret interface{}, params ...interface{
 		return errors.New(response.Error)
 	}
 
-	if ret != nil {
 
-		err = packager.Unpack([]byte(self.opt[PACKAGER].(string)), bytes.NewBufferString(response.Retval).Bytes(), ret)
-		return err
-	}
-	return nil
+	pack_data,err := packager.Pack(self.request.Protocol.Packager[:],response.Retval)
+
+	err = packager.Unpack(self.request.Protocol.Packager[:],pack_data,ret)
+
+	return err
 }
 
-func (self *Client) Call(method string, ret interface{}, params ...interface{}) (err error) {
+func (self *Client) Call(method string, ret interface{},params ...interface{}) (err error) {
 
 	switch self.netmode {
 
 	case TCP_CLIENT:
 		{
-			return self.tcpCall(method, ret, params...)
+			return self.tcpCall(method, ret,params...)
 		}
 	}
+
 	return errors.New("unsupported client netmode")
+}
+
+func (self *Client)parseRetVal(retval interface{},parse interface{})(err error){
+
+	buf := bytes.NewBufferString("")
+
+	enc := gob.NewEncoder(buf)
+	dec := gob.NewDecoder(buf)
+
+	err = enc.Encode(retval)
+
+	if err != nil {
+
+		return err
+	}
+
+	err = dec.Decode(parse)
+
+	if err != nil {
+
+		return err
+	}
+
+	return nil
+
 }

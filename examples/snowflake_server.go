@@ -68,9 +68,9 @@ func realTime() (uint64) {
 	return retval
 }
 
-func getUuid() (map[string]uint64) {
+func getUuid() (map[string]int64) {
 
-	var retval map[string]uint64 = make(map[string]uint64,1)
+	var retval map[string]int64 = make(map[string]int64,1)
 
 	if ukeyStartup(1288834974657, *machine_id, *data_center) == -1 {
 
@@ -97,11 +97,12 @@ func getUuid() (map[string]uint64) {
 
 	context.last_timestamp = timestamp
 
-	retval["uuid"] = uint64(
+	retval["uuid"] = int64(
 		((uint64(timestamp) - uint64(context.twepoch)) << uint(context.timestamp_shift)) |
 		(uint64(context.data_center_id) << uint64(context.data_center_id_shift)) |
 		(uint64(context.worker_id) << uint64(context.worker_id_shift)) |
 		uint64(context.sequence))
+
 	return retval
 
 }
