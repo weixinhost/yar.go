@@ -12,7 +12,8 @@
 
 ### Example Server
 
-```golang
+```go
+
 package main
 import ( "yar" )
 
@@ -32,7 +33,7 @@ func main() {
 
 ### Example Client
 
-```golang
+```go
 
 package main
 import (
@@ -56,3 +57,4 @@ func main(){
 }
 
 ```
+
