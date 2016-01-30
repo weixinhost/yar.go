@@ -4,7 +4,6 @@ import (
 	"runtime"
 	"flag"
 	"time"
-	"fmt"
 )
 
 type snowflake_context struct  {
