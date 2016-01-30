@@ -2,10 +2,9 @@ package yar
 import (
 	"math/rand"
 	"yar/packager"
-	"net"
-	"fmt"
 	"bytes"
 	"errors"
+	"yar/transports"
 )
 
 type Opt int
@@ -35,10 +34,9 @@ const (
 )
 
 type Client struct {
-
 	netmode  int
-	hostname string
 	request  *Request
+	transport transports.Transport
 	opt      map[Opt]interface{}
 
 }
@@ -49,12 +47,10 @@ func NewClientWithTcp(host string, port int) (client *Client, err error) {
 	client.request = new(Request)
 	client.opt = make(map[Opt]interface{})
 	client.request.Protocol = NewProtocol()
-	client.hostname = fmt.Sprintf("%s:%d", host, port)
+	client.transport,_ = transports.NewTcp(host,port)
 	client.netmode = TCP_CLIENT
 	client.initOpt()
-
 	return client, nil
-
 }
 
 
@@ -109,18 +105,13 @@ func (self *Client)tcpCall(method string, ret interface{}, params ... interface{
 	pack, err = packager.Pack([]byte(self.opt[PACKAGER].(string)), self.request)
 
 	if err != nil {
-
 		return err
-
 	}
 
 	self.request.Protocol.BodyLength = uint32(len(pack) + 8)
-
-
-	conn, conn_err := net.Dial("tcp", self.hostname)
+	conn, conn_err := self.transport.Connection()
 
 	if conn_err != nil {
-
 		return conn_err
 	}
 

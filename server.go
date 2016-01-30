@@ -59,7 +59,7 @@ func (self *Server) ReadProtocol(conn net.Conn) (*Protocol, error) {
 
 	for {
 
-		size, err := self.transport.Read(conn, protocol_buffer[read_total:])
+		size, err := conn.Read(protocol_buffer[read_total:])
 
 		if err != nil {
 			return nil, err
@@ -170,7 +170,6 @@ func (self *Server) handler(conn net.Conn) {
 		goto send
 	}
 
-
 	response.Return(rs[0].Interface())
 
 send:
@@ -179,16 +178,14 @@ send:
 
 	protocol.BodyLength = uint32(len(ret) + 8)
 	send_protocol := protocol.Bytes()
-	self.transport.Write(conn, send_protocol.Bytes())
-	self.transport.Write(conn, ret)
+	conn.Write(send_protocol.Bytes())
+	conn.Write(ret)
 	conn.Close()
 
 }
 
 func (self *Server) Run() {
-
 	defer self.transport.Stop()
 	self.transport.OnConnection(self.handler)
-	self.transport.Run()
-
+	self.transport.Serve()
 }
