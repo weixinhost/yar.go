@@ -8,7 +8,7 @@
 
      1. 多种数据打包方案（JSON,MSGPACK）
      2. Server端非侵入式编程.与编写本地函数一致（框架使用reflect机制进行调度处理)
-
+     3. 多种数据传输协议(TCP,UDP,HTTP)
 
 ### Example Server
 
