@@ -60,11 +60,8 @@ func ukeyStartup(twepoch uint64,worker_id int,data_center_id int) (int){
 func realTime() (uint64) {
 
 	var retval uint64
-
 	now := time.Now()
-
-	retval = uint64((now.Unix() * 1000) + int64((now.Nanosecond() / 1000000000)))
-
+	retval = uint64((now.Unix() * 1000) + int64((now.Nanosecond() / 1000000)))
 	return retval
 }
 
