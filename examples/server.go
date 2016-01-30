@@ -4,7 +4,9 @@ import ( "yar"
 )
 
 func test_action(int_num int,float_num float32,str string)(string) {
+
 	return "abcdefghj"
+
 }
 
 func main() {

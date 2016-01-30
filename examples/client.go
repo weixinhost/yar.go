@@ -14,8 +14,7 @@ func main(){
 	}
 
 	var ret map[string]uint64
-//	err = client.Call("test",&ret,123,1.23,"abcdefg")
-	err = client.Call("uuid",&ret)
+	err = client.Call("uuid",&ret,1)
 	fmt.Println(ret)
 	fmt.Println(err)
 }

@@ -12,9 +12,7 @@ const (
 type ErrorType int
 
 const (
-
 	MAGIC_NUMBER = 0x80DFEC60
-
 )
 
 const (
@@ -30,14 +28,14 @@ const (
 )
 
 type Protocol struct {
-	Id           uint32
-	Version      uint16
+	Id          uint32
+	Version     uint16
 	MagicNumber uint32
-	Reserved     uint32
-	Provider     [32]byte
-	Token        [32]byte
-	BodyLength   uint32
-	Packager     [8]byte
+	Reserved    uint32
+	Provider    [32]byte
+	Token       [32]byte
+	BodyLength  uint32
+	Packager    [8]byte
 }
 
 func NewProtocol() *Protocol {

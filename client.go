@@ -1,44 +1,38 @@
 package yar
+
 import (
-	"math/rand"
-	"yar/packager"
 	"bytes"
 	"errors"
+	"math/rand"
+	"yar/packager"
 	"yar/transports"
 )
 
 type Opt int
 
 const (
-
 	CONNECTION_TIMEOUT Opt = 1
-	TIMEOUT               Opt = 2
+	TIMEOUT            Opt = 2
 	PACKAGER           Opt = 3
-
 )
 
 const (
-
-	TCP_CLIENT = 1
+	TCP_CLIENT  = 1
 	HTTP_CLIENT = 2
-	UDP_CLIENT = 3
-
+	UDP_CLIENT  = 3
 )
 
 const (
-
-	DEFAULT_PACKAGER = "json"
-	DEFAULT_TIMEOUT = 5000
+	DEFAULT_PACKAGER           = "json"
+	DEFAULT_TIMEOUT            = 5000
 	DEFAULT_CONNECTION_TIMEOUT = 1000
-
 )
 
 type Client struct {
-	netmode  int
-	request  *Request
+	netmode   int
+	request   *Request
 	transport transports.Transport
-	opt      map[Opt]interface{}
-
+	opt       map[Opt]interface{}
 }
 
 func NewClientWithTcp(host string, port int) (client *Client, err error) {
@@ -47,14 +41,13 @@ func NewClientWithTcp(host string, port int) (client *Client, err error) {
 	client.request = new(Request)
 	client.opt = make(map[Opt]interface{})
 	client.request.Protocol = NewProtocol()
-	client.transport,_ = transports.NewTcp(host,port)
+	client.transport, _ = transports.NewTcp(host, port)
 	client.netmode = TCP_CLIENT
 	client.initOpt()
 	return client, nil
 }
 
-
-func (self *Client)initOpt() {
+func (self *Client) initOpt() {
 
 	self.opt[CONNECTION_TIMEOUT] = DEFAULT_CONNECTION_TIMEOUT
 	self.opt[TIMEOUT] = DEFAULT_TIMEOUT
@@ -62,27 +55,28 @@ func (self *Client)initOpt() {
 
 }
 
-func (self *Client)SetOpt(opt Opt, v interface{}) bool {
+func (self *Client) SetOpt(opt Opt, v interface{}) bool {
 
 	switch opt {
 
 	case CONNECTION_TIMEOUT:
 	case TIMEOUT:
-	case PACKAGER:{
-		self.opt[opt] = v
-		return true
-	}
+	case PACKAGER:
+		{
+			self.opt[opt] = v
+			return true
+		}
 
 	}
 
 	return false
 }
 
-func (self *Client)tcpCall(method string, ret interface{}, params ... interface{}) (err error) {
+func (self *Client) tcpCall(method string, ret interface{}, params ...interface{}) (err error) {
 
 	if params != nil {
 		self.request.Params = params
-	}else {
+	} else {
 		self.request.Params = []string{}
 	}
 	self.request.Id = rand.Uint32()
@@ -115,13 +109,12 @@ func (self *Client)tcpCall(method string, ret interface{}, params ... interface{
 		return conn_err
 	}
 
-
 	conn.Write(self.request.Protocol.Bytes().Bytes())
 	conn.Write(pack)
 	protocol_buffer := make([]byte, PROTOCOL_LENGTH)
 	conn.Read(protocol_buffer)
 	self.request.Protocol.Init(bytes.NewBuffer(protocol_buffer))
-	body_buffer := make([]byte, self.request.Protocol.BodyLength - 8)
+	body_buffer := make([]byte, self.request.Protocol.BodyLength-8)
 	conn.Read(body_buffer)
 	response := new(Response)
 	err = packager.Unpack([]byte(self.opt[PACKAGER].(string)), body_buffer, &response)
@@ -138,13 +131,14 @@ func (self *Client)tcpCall(method string, ret interface{}, params ... interface{
 	return nil
 }
 
-func (self *Client)Call(method string, ret interface{}, params ... interface{}) (err error) {
+func (self *Client) Call(method string, ret interface{}, params ...interface{}) (err error) {
 
 	switch self.netmode {
 
-	case TCP_CLIENT : {
-		return self.tcpCall(method, ret, params...)
-	}
+	case TCP_CLIENT:
+		{
+			return self.tcpCall(method, ret, params...)
+		}
 	}
 	return errors.New("unsupported client netmode")
 }

@@ -68,7 +68,6 @@ func realTime() (uint64) {
 	return retval
 }
 
-
 func getUuid() (map[string]uint64) {
 
 	var retval map[string]uint64 = make(map[string]uint64,1)
@@ -110,7 +109,7 @@ func getUuid() (map[string]uint64) {
 
 var data_center = flag.Int("data-center",1,"the data center id")
 
-var machine_id = flag.Int("worder_id",1,"the machine_id")
+var machine_id = flag.Int("worker_id",1,"the machine_id")
 
 func main() {
 

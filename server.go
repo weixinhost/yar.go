@@ -3,23 +3,24 @@ package yar
 import (
 	"bytes"
 	"net"
+	"reflect"
 	"yar/packager"
 	"yar/transports"
-	"reflect"
+	"errors"
+	"fmt"
 )
 
 type Server struct {
-
 	handler_list map[string]Handler
 
-	opt map[string]interface{}
+	opt          map[string]interface{}
 
-	transport transports.Transport
+	transport    transports.Transport
 }
 
 var CONNECTION_TOTAL = 0
 
-func NewServer(host string,port int) *Server {
+func NewServer(host string, port int) *Server {
 
 	s := new(Server)
 
@@ -80,107 +81,180 @@ func (self *Server) ReadProtocol(conn net.Conn) (*Protocol, error) {
 	return protocol, nil
 }
 
+func (self *Server) getProtocol(conn net.Conn) (protocol *Protocol, err error) {
+
+	protocol_buffer := make([]byte, PROTOCOL_LENGTH)
+	receive_len := 0
+
+	for {
+
+		_len, err := conn.Read(protocol_buffer[receive_len:])
+
+		if err != nil {
+			return nil, err
+		}
+
+		receive_len += _len
+
+		if receive_len >= PROTOCOL_LENGTH {
+			break
+		}
+	}
+
+	protocol = NewProtocolWithBytes(bytes.NewBuffer(protocol_buffer))
+	//todo check data
+	return protocol, nil
+}
+
+func (self *Server) getRequest(conn net.Conn,protocol *Protocol) (request *Request, err error) {
+
+	if protocol == nil {
+
+		return nil,errors.New("get or parse protocol failed")
+
+	}
+
+	//min body length is 8 . packager is 8 bit
+	if protocol.BodyLength < 8 {
+
+		return nil,errors.New("body data errror")
+
+	}
+
+	real_body_length := protocol.BodyLength - 8
+
+	body_buffer := make([]byte,real_body_length)
+	receive_len := 0
+
+	for {
+		_len,err := conn.Read(body_buffer[receive_len:])
+		if err != nil {
+			return nil,err
+		}
+		receive_len += _len
+		if receive_len >=int(real_body_length) {
+			break
+		}
+	}
+
+	request = new(Request)
+	request.Protocol = protocol
+	err = packager.Unpack(protocol.Packager[:],body_buffer,&request)
+	return request,err
+}
+
+func (self *Server) sendResponse(conn net.Conn,response *Response) {
+
+	protocol := response.Protocol
+
+	if protocol == nil {
+		conn.Close()
+		return
+	}
+
+	ret, _ := packager.Pack(protocol.Packager[0:], response)
+	protocol.BodyLength = uint32(len(ret) + 8)
+	send_protocol := protocol.Bytes()
+	conn.Write(send_protocol.Bytes())
+	conn.Write(ret)
+	conn.Close()
+}
+
 func (self *Server) handler(conn net.Conn) {
 
-	var read_total int
-	var body_buffer []byte
 	var handler Handler = nil
 	var fv reflect.Value
 	var call_params []interface{}
 	var real_params []reflect.Value
 	var rs []reflect.Value
 
-	response := new(Response)
-	request := new(Request)
+	var protocol *Protocol
+	var request *Request
+	response := NewResponse()
 
-	protocol, err := self.ReadProtocol(conn)
+	protocol,err := self.getProtocol(conn)
 
-	if err != nil {
-		response.Status = ERR_PROTOCOL
-		response.Error = err.Error()
-		goto send
-	}
-
-	body_buffer = make([]byte, protocol.BodyLength)
-
-	for {
-
-		len, err := conn.Read(body_buffer[read_total:])
-
-		if err != nil {
-			response.Status = ERR_PROTOCOL
-			response.Error = err.Error()
-			goto send
-			break
-		}
-
-		read_total += len
-		if read_total >= int(protocol.BodyLength) {
-			break
-		}
-	}
-
-	err = packager.Unpack(protocol.Packager[0:], body_buffer, &request)
+	response.Protocol = protocol
 
 	if err != nil {
-		response.Status = ERR_PACKAGER
-		response.Error = err.Error()
-		goto send
+		conn.Close()
+		return
+	}
+
+	defer func() {
+
+		if err := recover(); err != nil {
+			response.Status = ERR_EMPTY_RESPONSE
+			response.Error = fmt.Sprintf("%s:%s", "server has panic!",err)
+			self.sendResponse(conn,response)
+		}
+
+	}()
+
+	request,err = self.getRequest(conn,protocol)
+
+	if err != nil {
+
+		response.Status = ERR_REQUEST
+		response.Error = "server read request error"
+		self.sendResponse(conn,response)
+		return
 	}
 
 	request.Protocol = protocol
 	request.Id = request.Protocol.Id
 	handler = self.handler_list[request.Method]
 	response.Id = request.Id
-	response.Protocol = protocol
-
 	if nil == handler {
 		response.Status = ERR_PROTOCOL
 		response.Error = "undefined api:" + request.Method
-		goto send
+		self.sendResponse(conn,response)
+		return
 	}
 
 	fv = reflect.ValueOf(handler)
 
 	call_params = request.Params.([]interface{})
 
-	real_params = make([]reflect.Value,len(call_params))
+	if len(call_params) != fv.Type().NumIn() {
 
-	for i, v := range call_params {
-
-		raw_val := reflect.ValueOf(v)
-
-		real_params[i] = raw_val.Convert(fv.Type().In(i))
+		response.Status = ERR_REQUEST
+		response.Error = "mismatch call param value type or length."
+		self.sendResponse(conn,response)
+		return
 
 	}
 
-	rs = fv.Call(real_params)
+	real_params = make([]reflect.Value, len(call_params))
 
-	if(len(rs) < 1){
+	func() {
+
+		for i, v := range call_params {
+			raw_val := reflect.ValueOf(v)
+			real_params[i] = raw_val.Convert(fv.Type().In(i))
+		}
+
+		rs = fv.Call(real_params)
+	}()
+
+	if len(rs) < 1 {
 
 		response.Return(nil)
 
-		goto send
+		self.sendResponse(conn,response)
+		return
 	}
 
-	if (len(rs) > 1){
+	if len(rs) > 1 {
 
-		response.Error = "Not Supported Multi Return Values";
+		response.Error = "Not Supported Multi Return Values"
 		response.Status = ERR_OUTPUT
-		goto send
+		self.sendResponse(conn,response)
+		return
 	}
 
 	response.Return(rs[0].Interface())
-
-send:
-
-	ret, err := packager.Pack(protocol.Packager[0:], response)
-
-	protocol.BodyLength = uint32(len(ret) + 8)
-	send_protocol := protocol.Bytes()
-	conn.Write(send_protocol.Bytes())
-	conn.Write(ret)
-	conn.Close()
+	self.sendResponse(conn,response)
 
 }
 
