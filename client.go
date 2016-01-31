@@ -8,7 +8,6 @@ import (
 	"yar/transports"
 	"encoding/gob"
 	"strings"
-	"fmt"
 	"net/http"
 )
 
@@ -55,15 +54,10 @@ func (client *Client)init() {
 
 	switch client.net {
 
-	case "tcp" : {
-		client.transport,_ = transports.NewTcp(client.hostname)
+	case "tcp","udp","unix" : {
+		client.transport,_ = transports.NewSock(client.net,client.hostname)
 		break
 	}
-	case "udp" : {
-		client.transport,_ = transports.NewUdp(client.hostname)
-		break
-	}
-
 	}
 
 }
@@ -94,7 +88,7 @@ func (self *Client) SetOpt(opt Opt, v interface{}) bool {
 	return false
 }
 
-func (self *Client) tcpCall(method string,ret interface{},params ...interface{}) (err error) {
+func (self *Client) sockCall(method string,ret interface{},params ...interface{}) (err error) {
 
 	if params != nil {
 		self.request.Params = params
@@ -141,71 +135,12 @@ func (self *Client) tcpCall(method string,ret interface{},params ...interface{})
 	if response.Status != ERR_OKEY {
 		return errors.New(response.Error)
 	}
-
-	fmt.Printf("%s\n",body_buffer)
-
 	//这里需要优化,需要干掉这次pack/unpack
 	pack_data,err := packager.Pack(self.request.Protocol.Packager[:],response.Retval)
 	err = packager.Unpack(self.request.Protocol.Packager[:],pack_data,ret)
 
 	return err
 }
-
-func (self *Client) udpCall(method string,ret interface{},params ...interface{}) (err error) {
-
-	if params != nil {
-		self.request.Params = params
-	} else {
-		self.request.Params = []string{}
-	}
-	self.request.Id = rand.Uint32()
-	self.request.Method = method
-	self.request.Protocol.Id = self.request.Id
-	self.request.Protocol.MagicNumber = MAGIC_NUMBER
-
-	var pack []byte
-
-	if len(self.opt[PACKAGER].(string)) < 8 {
-
-		for i := 0; i < len(self.opt[PACKAGER].(string)); i++ {
-			self.request.Protocol.Packager[i] = self.opt[PACKAGER].(string)[i]
-		}
-	}
-
-	pack, err = packager.Pack([]byte(self.opt[PACKAGER].(string)), self.request)
-
-	if err != nil {
-		return err
-	}
-
-	self.request.Protocol.BodyLength = uint32(len(pack) + PACKAGER_LENGTH)
-	conn, conn_err := self.transport.Connection()
-
-	if conn_err != nil {
-		return conn_err
-	}
-
-	conn.Write(self.request.Protocol.Bytes().Bytes())
-	conn.Write(pack)
-	protocol_buffer := make([]byte, PROTOCOL_LENGTH + PACKAGER_LENGTH)
-	conn.Read(protocol_buffer)
-	self.request.Protocol.Init(bytes.NewBuffer(protocol_buffer))
-	body_buffer := make([]byte, self.request.Protocol.BodyLength - PACKAGER_LENGTH)
-	conn.Read(body_buffer)
-	response := new(Response)
-	err = packager.Unpack([]byte(self.opt[PACKAGER].(string)), body_buffer, &response)
-
-	if response.Status != ERR_OKEY {
-		return errors.New(response.Error)
-	}
-
-	//这里需要优化,需要干掉这次pack/unpack
-	pack_data,err := packager.Pack(self.request.Protocol.Packager[:],response.Retval)
-	err = packager.Unpack(self.request.Protocol.Packager[:],pack_data,ret)
-
-	return err
-}
-
 
 func (self *Client) httpCall(method string,ret interface{},params ...interface{}) (err error) {
 
@@ -270,14 +205,11 @@ func (self *Client) Call(method string, ret interface{},params ...interface{}) (
 
 	switch self.net {
 
-	case "tcp":
+	case "tcp" , "udp" , "unix":
 		{
-			return self.tcpCall(method, ret,params...)
+			return self.sockCall(method, ret,params...)
 		}
 
-	case "udp":{
-		return self.udpCall(method, ret,params...)
-	}
 	case "http" :{
 		return self.httpCall(method,ret,params...)
 	}

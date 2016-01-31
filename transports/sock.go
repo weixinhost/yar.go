@@ -7,61 +7,63 @@ import (
 )
 
 
-type UdpConnection struct {
+type SockConnection struct {
+
 	conn net.Conn
 }
 
-func newUdpConnection(conn net.Conn)(*UdpConnection){
-	tcpConn := new(UdpConnection)
+func newSockConnection(conn net.Conn)(*SockConnection){
+	tcpConn := new(SockConnection)
 	tcpConn.conn = conn
 	return tcpConn
 }
 
-func (conn *UdpConnection)Read(buffer []byte)(n int ,err error){
+func (conn *SockConnection)Read(buffer []byte)(n int ,err error){
 	return conn.conn.Read(buffer)
 }
 
-func (conn *UdpConnection)Write(buffer[]byte)(n int ,err error){
+func (conn *SockConnection)Write(buffer[]byte)(n int ,err error){
 	return conn.conn.Write(buffer)
 }
 
-func (conn *UdpConnection)Close()(err error){
+func (conn *SockConnection)Close()(err error){
 	return conn.conn.Close()
 }
 
-func (conn *UdpConnection)SetReadTimeout(timeout time.Duration){
+func (conn *SockConnection)SetReadTimeout(timeout time.Duration){
 	now := time.Now()
 	conn.conn.SetReadDeadline(now.Add(timeout))
 }
 
-func (conn *UdpConnection)SetWriteTimeout(timeout time.Duration){
+func (conn *SockConnection)SetWriteTimeout(timeout time.Duration){
 	now := time.Now()
 	conn.conn.SetWriteDeadline(now.Add(timeout))
 }
 
-
-type Udp struct {
+type Sock struct {
 	hostname string
+	net 	 string
 	listener net.Listener
 	handler ConnectionHandler
 	running bool
 }
 
-func NewUdp(hostname string) (*Udp, error) {
-	tcp := new(Udp)
+func NewSock(net string,hostname string) (*Sock, error) {
+	tcp := new(Sock)
 	tcp.hostname = hostname
 	tcp.handler = defaultHandler
+	tcp.net = net
 	return tcp, nil
 }
 
-func (self *Udp) OnConnection(handler ConnectionHandler) {
+func (self *Sock) OnConnection(handler ConnectionHandler) {
 
 	self.handler = handler
 }
 
-func (self *Udp) Serve()(err error) {
+func (self *Sock) Serve()(err error) {
 
-	listener, err := net.Listen("tcp", self.hostname)
+	listener, err := net.Listen(self.net, self.hostname)
 
 	if err != nil {
 		return err
@@ -84,27 +86,36 @@ func (self *Udp) Serve()(err error) {
 			os.Exit(-1)
 		}
 
-		tcpConn := newUdpConnection(conn)
+		tcpConn := newSockConnection(conn)
 		self.initConnection(tcpConn)
 		go self.handler(tcpConn)
 	}
 
 	return nil
+
 }
 
-func(self *Udp)Connection()(t TransportConnection,err error){
-	conn,err  :=  net.Dial("tcp",self.hostname)
-	tcpConn := newTcpConnection(conn)
+func(self *Sock)Connection()(t TransportConnection,err error){
+	conn,err  :=  net.Dial(self.net,self.hostname)
+
+	if err != nil {
+
+		return nil,err
+	}
+
+	tcpConn := newSockConnection(conn)
 	self.initConnection(tcpConn)
 	return tcpConn,err
 }
 
-func (self *Udp)initConnection(conn TransportConnection){
+func (self *Sock)initConnection(conn TransportConnection){
+
 	conn.SetReadTimeout(CONNECTION_READ_TIMEOUT_SECOND * time.Second)
 	conn.SetWriteTimeout(CONNECTION_READ_TIMEOUT_SECOND * time.Second)
+
 }
 
-func (self *Udp) Stop() {
+func (self *Sock) Stop() {
 
 	self.running = false
 

@@ -110,27 +110,15 @@ func (server *Server)init(){
 
 	switch strings.ToLower(server.netProtocol) {
 
-	case "tcp" 	: {
+	case "tcp" , "udp" , "unix": {
 
-		server.transport,_ = transports.NewTcp(server.hostname)
-
-		break
-	}
-
-	case "udp" 	:{
-
-		server.transport,_ = transports.NewUdp(server.hostname)
+		server.transport,_ = transports.NewSock(server.netProtocol,server.hostname)
 
 		break
 	}
 
 	case "http" :{
 		server.transport,_ = transports.NewHttp(server.hostname,"/",5 * time.Second,5 * time.Second)
-		break
-	}
-
-	case "unix" 	:{
-
 		break
 	}
 
