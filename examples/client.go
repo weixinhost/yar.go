@@ -9,6 +9,7 @@ type UUidResponse struct {
 	Uuid float64		`json:"uuid"`
 }
 
+
 func main(){
 
 	client := yar.NewClient("tcp","127.0.0.1:6790")
