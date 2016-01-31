@@ -1,6 +1,10 @@
 package transports
 
-import "net"
+import (
+
+	"io"
+	"time"
+)
 
 const (
 
@@ -8,14 +12,23 @@ const (
 	CONNECTION_WRITE_TIMEOUT_SECOND = 5
 )
 
+type TransportConnection interface{
+	io.Reader
+	io.Writer
+	io.Closer
 
+	SetReadTimeout(timeout time.Duration)
+	SetWriteTimeout(timeout time.Duration)
+}
 
-type ConnectionHandler func(conn net.Conn)
-
+type ConnectionHandler func(conn TransportConnection)
 
 type Transport interface {
 	Serve()(err error)
 	OnConnection(handler ConnectionHandler)
-	Connection()(conn net.Conn,err error)
+	Connection()(conn TransportConnection,err error)
 }
 
+func defaultHandler(conn TransportConnection) {
+	conn.Close()
+}

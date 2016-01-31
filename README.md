@@ -17,16 +17,16 @@
 package main
 import ( "yar" )
 
+
 func test_action(int_num int,float_num float32,str string)(string) {
 	return "abcdefghj"
 }
 
-func main() {
-
-	server := yar.NewServer("0.0.0.0", 6789)
-	server.RegisterHandler("test", test_action)
-	server.Run()
-
+func main(){
+    server,_:= yar.NewServer("tcp",":6790")
+	server.RegisterHandler("echo", test_action)
+	//进入服务器事件循环
+    server.Serve()
 }
 
 ```
@@ -43,18 +43,13 @@ import (
 
 func main(){
 
-	client ,err := yar.NewClientWithTcp("127.0.0.1",6789)
-
-	if err != nil {
-		fmt.Printf("err:%s",err)
-		return
-	}
-
-	var ret string
-	err = client.Call("test",&ret,123,1.23,"abcdefg")
-	fmt.Println(ret)
-	fmt.Println(err)
+    client := yar.NewClient("tcp","127.0.0.1:6790")
+    var ret string
+    err := client.Call("echo",&ret,"hello")
 }
 
 ```
 
+### Documention
+
+    可以使用godoc查看开发文档

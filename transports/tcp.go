@@ -6,21 +6,44 @@ import (
 	"time"
 )
 
-const (
-	NetMode = "tcp"
-)
+
+type TcpConnection struct {
+	conn net.Conn
+}
+
+func newTcpConnection(conn net.Conn)(*TcpConnection){
+	tcpConn := new(TcpConnection)
+	tcpConn.conn = conn
+	return tcpConn
+}
+
+func (conn *TcpConnection)Read(buffer []byte)(n int ,err error){
+	return conn.conn.Read(buffer)
+}
+
+func (conn *TcpConnection)Write(buffer[]byte)(n int ,err error){
+	return conn.conn.Write(buffer)
+}
+
+func (conn *TcpConnection)Close()(err error){
+	return conn.conn.Close()
+}
+
+func (conn *TcpConnection)SetReadTimeout(timeout time.Duration){
+		now := time.Now()
+		conn.conn.SetReadDeadline(now.Add(timeout))
+}
+
+func (conn *TcpConnection)SetWriteTimeout(timeout time.Duration){
+	now := time.Now()
+	conn.conn.SetWriteDeadline(now.Add(timeout))
+}
 
 type Tcp struct {
-
 	hostname string
 	listener net.Listener
 	handler ConnectionHandler
 	running bool
-}
-
-func defaultHandler(conn net.Conn) {
-
-	conn.Close()
 }
 
 func NewTcp(hostname string) (*Tcp, error) {
@@ -35,9 +58,11 @@ func (self *Tcp) OnConnection(handler ConnectionHandler) {
 	self.handler = handler
 }
 
+
+
 func (self *Tcp) Serve()(err error) {
 
-	listener, err := net.Listen(NetMode, self.hostname)
+	listener, err := net.Listen("tcp", self.hostname)
 
 	if err != nil {
 		return err
@@ -60,32 +85,27 @@ func (self *Tcp) Serve()(err error) {
 			os.Exit(-1)
 		}
 
-		self.initConnection(conn)
-		go self.handler(conn)
+		tcpConn := newTcpConnection(conn)
+		self.initConnection(tcpConn)
+		go self.handler(tcpConn)
 	}
 
 	return nil
 
 }
 
-func(self *Tcp)Connection()(conn net.Conn,err error){
-
-	conn,err =  net.Dial("tcp",self.hostname)
-	self.initConnection(conn)
-
-	return conn,err
-
+func(self *Tcp)Connection()(t TransportConnection,err error){
+	conn,err  :=  net.Dial("tcp",self.hostname)
+	tcpConn := newTcpConnection(conn)
+	self.initConnection(tcpConn)
+	return tcpConn,err
 }
 
-func (self *Tcp)initConnection(conn net.Conn){
+func (self *Tcp)initConnection(conn TransportConnection){
 
-	now := time.Now()
+	conn.SetReadTimeout(CONNECTION_READ_TIMEOUT_SECOND * time.Second)
+	conn.SetWriteTimeout(CONNECTION_READ_TIMEOUT_SECOND * time.Second)
 
-	readDeadline := now.Add(CONNECTION_READ_TIMEOUT_SECOND * time.Second)
-	conn.SetReadDeadline(readDeadline)
-
-	writeDeadline := readDeadline.Add(CONNECTION_READ_TIMEOUT_SECOND * time.Second)
-	conn.SetWriteDeadline(writeDeadline)
 }
 
 func (self *Tcp) Stop() {

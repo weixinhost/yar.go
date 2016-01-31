@@ -2,8 +2,20 @@ package main
 import (
 
 	"runtime"
-	"net/rpc"
+	//"yar"
+	"net/http"
+	"fmt"
 )
+
+
+type Custom struct {
+
+}
+
+func(c *Custom)ServeHTTP(writer http.ResponseWriter,request *http.Request){
+
+	fmt.Printf("sss")
+}
 
 func test_action(int_num int,float_num float32,str string)(string) {
 
@@ -13,10 +25,17 @@ func test_action(int_num int,float_num float32,str string)(string) {
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
+	/*
+	server,_:= yar.NewServer("udp",":6790")
+	server.RegisterHandler("test", test_action)
+	server.Serve()
+	*/
 
-	server :=rpc.NewServer()
+	http.HandleFunc("/",func(writer http.ResponseWriter,request *http.Request){
 
-	server.Register(test_action)
+		fmt.Printf("%s %s","start",request.Body)
+	})
 
-	server.Accept()
+	http.ListenAndServe(":8080",nil)
+
 }

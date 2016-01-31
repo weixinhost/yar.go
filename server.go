@@ -2,24 +2,29 @@ package yar
 import (
 	"strings"
 	"yar/transports"
-	"net"
+//	"net"
 	"bytes"
 	"errors"
 	"yar/packager"
 	"reflect"
 	"fmt"
+	"time"
 )
 
-
+// Yar 服务端
+// [file://examples/snowflake_server.go]
 type Server struct {
 
 	opt 		map[string]interface{}
+	filterList  []ServerFilter
+	filterIdx  int
 	handlerList map[string]Handler
 	netProtocol string
 	hostname 	string
 	transport 	transports.Transport
 }
 
+//NewServer is easy to create a yar server
 func NewServer(net string,hostname string) (server *Server,err error) {
 
 	server = new(Server)
@@ -27,7 +32,6 @@ func NewServer(net string,hostname string) (server *Server,err error) {
 	server.netProtocol = net
 	server.hostname = hostname
 	server.transport = nil
-
 	return
 }
 
@@ -38,13 +42,21 @@ func (server *Server) RegisterHandler(name string ,handler Handler){
 
 }
 
+func(server *Server) AddFilter(filter ServerFilter){
+
+	server.filterList[server.filterIdx] = filter
+	server.filterIdx++
+}
+
 func (server *Server) RemoveHandler(name string) {
 
 	delete(server.handlerList,name)
 
 }
 
-func (server *Server) OnConnection(conn net.Conn) {
+func (server *Server) OnConnection(conn transports.TransportConnection) {
+
+	defer conn.Close()
 
 	protocol,err := server.getProtocol(conn)
 	response := NewResponse()
@@ -53,12 +65,10 @@ func (server *Server) OnConnection(conn net.Conn) {
 		server.sendResponse(conn,response)
 		return ;
 	}
-
 	response.Protocol = protocol
-
 	request,err := server.getRequest(conn,protocol)
 	if err != nil {
-		response.Error = "get or parse request errror"
+		response.Error = "get or parse request errror:" + err.Error()
 		response.Status = ERR_TRANSPORT
 		server.sendResponse(conn,response)
 		return
@@ -66,8 +76,13 @@ func (server *Server) OnConnection(conn net.Conn) {
 
 	request.Id 	= protocol.Id
 	response.Id = request.Id
-
 	request.Protocol = protocol
+
+	if server.auth(conn,request,response) == false {
+		response.Error 		= "auth failed"
+		response.Status		= ERR_EMPTY_RESPONSE
+	}
+
 	server.call(request,response)
 	server.sendResponse(conn,response)
 }
@@ -103,10 +118,14 @@ func (server *Server)init(){
 	}
 
 	case "udp" 	:{
+
+		server.transport,_ = transports.NewUdp(server.hostname)
+
 		break
 	}
 
 	case "http" :{
+		server.transport,_ = transports.NewHttp(server.hostname,"/",5 * time.Second,5 * time.Second)
 		break
 	}
 
@@ -120,7 +139,7 @@ func (server *Server)init(){
 }
 
 
-func (server *Server)getProtocol(conn net.Conn)(protocol *Protocol,err error){
+func (server *Server)getProtocol(conn transports.TransportConnection)(protocol *Protocol,err error){
 
 	protocolBuffer := make([]byte,PROTOCOL_LENGTH + PACKAGER_LENGTH)
 
@@ -129,7 +148,6 @@ func (server *Server)getProtocol(conn net.Conn)(protocol *Protocol,err error){
 	for {
 
 		realLen,err := conn.Read(protocolBuffer)
-
 		if err != nil {
 			return nil,err
 		}
@@ -149,22 +167,19 @@ func (server *Server)getProtocol(conn net.Conn)(protocol *Protocol,err error){
 }
 
 
-func (server *Server)getRequest(conn net.Conn,protocol *Protocol)(request *Request,err error){
+func (server *Server)getRequest(conn transports.TransportConnection,protocol *Protocol)(request *Request,err error){
 
 	realBodyLen := protocol.BodyLength - PACKAGER_LENGTH
-
+	realBodyLen = 34
 	if realBodyLen < 0 {
 		return nil,errors.New("protocol body length parse error")
 	}
 
 	bodyBuffer := make([]byte,realBodyLen)
 	receiveLen := 0
-
 	for {
-
 		realLen,err := conn.Read(bodyBuffer)
-
-		if err != nil {
+		if err != nil  && err.Error() != "EOF"{
 			return nil,err
 		}
 
@@ -174,16 +189,12 @@ func (server *Server)getRequest(conn net.Conn,protocol *Protocol)(request *Reque
 			break
 		}
 	}
-
 	request = NewRequest()
 	err = packager.Unpack(protocol.Packager[:],bodyBuffer,request)
 	return request,err
 }
 
-
-func (server *Server)sendResponse(conn net.Conn,response *Response)(err error){
-
-	defer conn.Close()
+func (server *Server)sendResponse(conn transports.TransportConnection,response *Response)(err error){
 
 	if response.Protocol != nil {
 
@@ -201,7 +212,6 @@ func (server *Server)sendResponse(conn net.Conn,response *Response)(err error){
 
 	return nil
 }
-
 
 func (server *Server)call(request *Request,response *Response) {
 
@@ -253,5 +263,19 @@ func (server *Server)call(request *Request,response *Response) {
 
 		response.Return(rs[0].Interface())
 	}()
+}
+
+func (server *Server) auth(conn transports.TransportConnection,request *Request,response *Response) (ret bool){
+
+	ret = true
+	for _,v := range server.filterList {
+
+		if v(server,conn,request,response) == false {
+			ret = false
+			break
+		}
+	}
+
+	return ret
 }
 

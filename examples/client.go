@@ -2,6 +2,7 @@ package main
 import (
 	"fmt"
 	"yar"
+
 )
 
 type UUidResponse struct {
@@ -12,7 +13,7 @@ type UUidResponse struct {
 
 func main(){
 
-	client := yar.NewClient("tcp","127.0.0.1:6790")
+	client := yar.NewClient("http","http://127.0.0.1:6790")
 
 	ret := new(UUidResponse)
 
