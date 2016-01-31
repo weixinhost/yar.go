@@ -3,7 +3,7 @@ package transports
 import (
 	"net"
 	"os"
-	"fmt"
+	"time"
 )
 
 const (
@@ -12,8 +12,7 @@ const (
 
 type Tcp struct {
 
-	host string
-	port int
+	hostname string
 	listener net.Listener
 	handler ConnectionHandler
 	running bool
@@ -24,10 +23,9 @@ func defaultHandler(conn net.Conn) {
 	conn.Close()
 }
 
-func NewTcp(host string, port int) (*Tcp, error) {
+func NewTcp(hostname string) (*Tcp, error) {
 	tcp := new(Tcp)
-	tcp.host = host
-	tcp.port = port
+	tcp.hostname = hostname
 	tcp.handler = defaultHandler
 	return tcp, nil
 }
@@ -39,8 +37,7 @@ func (self *Tcp) OnConnection(handler ConnectionHandler) {
 
 func (self *Tcp) Serve()(err error) {
 
-	hostname := fmt.Sprintf("%s:%d",self.host,self.port)
-	listener, err := net.Listen(NetMode, hostname)
+	listener, err := net.Listen(NetMode, self.hostname)
 
 	if err != nil {
 		return err
@@ -62,6 +59,8 @@ func (self *Tcp) Serve()(err error) {
 		if err != nil {
 			os.Exit(-1)
 		}
+
+		self.initConnection(conn)
 		go self.handler(conn)
 	}
 
@@ -70,8 +69,23 @@ func (self *Tcp) Serve()(err error) {
 }
 
 func(self *Tcp)Connection()(conn net.Conn,err error){
-	hostname := fmt.Sprintf("%s:%d",self.host,self.port)
-	return net.Dial("tcp",hostname)
+
+	conn,err =  net.Dial("tcp",self.hostname)
+	self.initConnection(conn)
+
+	return conn,err
+
+}
+
+func (self *Tcp)initConnection(conn net.Conn){
+
+	now := time.Now()
+
+	readDeadline := now.Add(CONNECTION_READ_TIMEOUT_SECOND * time.Second)
+	conn.SetReadDeadline(readDeadline)
+
+	writeDeadline := readDeadline.Add(CONNECTION_READ_TIMEOUT_SECOND * time.Second)
+	conn.SetWriteDeadline(writeDeadline)
 }
 
 func (self *Tcp) Stop() {

@@ -11,16 +11,11 @@ type UUidResponse struct {
 
 func main(){
 
-	client ,err := yar.NewClientWithTcp("127.0.0.1",6790)
-
-	if err != nil {
-		fmt.Printf("err:%s",err)
-		return
-	}
+	client := yar.NewClient("tcp","127.0.0.1:6790")
 
 	ret := new(UUidResponse)
 
-	err = client.Call("uuid",&ret)
+	err := client.Call("uuid",&ret)
 
 	if err != nil {
 

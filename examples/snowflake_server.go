@@ -114,7 +114,7 @@ func main() {
 	flag.Parse()
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	server := yar.NewServer("0.0.0.0", 6790)
+	server,_:= yar.NewServer("tcp",":6790")
 	server.RegisterHandler("uuid", getUuid)
-	server.Run()
+	server.Serve()
 }

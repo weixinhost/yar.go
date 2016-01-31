@@ -6,7 +6,8 @@ import (
 )
 
 const (
-	PROTOCOL_LENGTH = 90
+	PROTOCOL_LENGTH = 82
+	PACKAGER_LENGTH = 8
 )
 
 type ErrorType int
@@ -41,7 +42,7 @@ type Protocol struct {
 func NewProtocol() *Protocol {
 
 	proto := new(Protocol)
-
+	proto.MagicNumber = MAGIC_NUMBER
 	return proto
 
 }
@@ -54,6 +55,7 @@ func NewProtocolWithBytes(payload *bytes.Buffer) *Protocol {
 
 	return p
 }
+
 
 func (self *Protocol) Init(payload *bytes.Buffer) bool {
 

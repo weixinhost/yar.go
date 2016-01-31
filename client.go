@@ -7,6 +7,8 @@ import (
 	"yar/packager"
 	"yar/transports"
 	"encoding/gob"
+	"strings"
+	"fmt"
 )
 
 type Opt int
@@ -30,22 +32,38 @@ const (
 )
 
 type Client struct {
-	netmode   int
+	net string
+	hostname string
 	request   *Request
 	transport transports.Transport
 	opt       map[Opt]interface{}
 }
 
-func NewClientWithTcp(host string, port int) (client *Client, err error) {
+func NewClient(net string,hostname string)(client *Client){
 
 	client = new(Client)
-	client.request = new(Request)
-	client.opt = make(map[Opt]interface{})
+	client.hostname = hostname
+	client.net = strings.ToLower(net)
+	client.opt = make(map[Opt]interface{},6)
+	client.request = NewRequest()
 	client.request.Protocol = NewProtocol()
-	client.transport, _ = transports.NewTcp(host, port)
-	client.netmode = TCP_CLIENT
 	client.initOpt()
-	return client, nil
+	client.init()
+
+	return client
+}
+
+func (client *Client)init() {
+
+	switch client.net {
+
+	case "tcp" : {
+		client.transport,_ = transports.NewTcp(client.hostname)
+		break
+	}
+
+	}
+
 }
 
 func (self *Client) initOpt() {
@@ -90,11 +108,8 @@ func (self *Client) tcpCall(method string,ret interface{},params ...interface{})
 	if len(self.opt[PACKAGER].(string)) < 8 {
 
 		for i := 0; i < len(self.opt[PACKAGER].(string)); i++ {
-
 			self.request.Protocol.Packager[i] = self.opt[PACKAGER].(string)[i]
-
 		}
-
 	}
 
 	pack, err = packager.Pack([]byte(self.opt[PACKAGER].(string)), self.request)
@@ -103,7 +118,7 @@ func (self *Client) tcpCall(method string,ret interface{},params ...interface{})
 		return err
 	}
 
-	self.request.Protocol.BodyLength = uint32(len(pack) + 8)
+	self.request.Protocol.BodyLength = uint32(len(pack) + PACKAGER_LENGTH)
 	conn, conn_err := self.transport.Connection()
 
 	if conn_err != nil {
@@ -112,10 +127,10 @@ func (self *Client) tcpCall(method string,ret interface{},params ...interface{})
 
 	conn.Write(self.request.Protocol.Bytes().Bytes())
 	conn.Write(pack)
-	protocol_buffer := make([]byte, PROTOCOL_LENGTH)
+	protocol_buffer := make([]byte, PROTOCOL_LENGTH + PACKAGER_LENGTH)
 	conn.Read(protocol_buffer)
 	self.request.Protocol.Init(bytes.NewBuffer(protocol_buffer))
-	body_buffer := make([]byte, self.request.Protocol.BodyLength-8)
+	body_buffer := make([]byte, self.request.Protocol.BodyLength - PACKAGER_LENGTH)
 	conn.Read(body_buffer)
 	response := new(Response)
 	err = packager.Unpack([]byte(self.opt[PACKAGER].(string)), body_buffer, &response)
@@ -124,9 +139,10 @@ func (self *Client) tcpCall(method string,ret interface{},params ...interface{})
 		return errors.New(response.Error)
 	}
 
+	fmt.Printf("%s\n",body_buffer)
 
+	//这里需要优化,需要干掉这次pack/unpack
 	pack_data,err := packager.Pack(self.request.Protocol.Packager[:],response.Retval)
-
 	err = packager.Unpack(self.request.Protocol.Packager[:],pack_data,ret)
 
 	return err
@@ -134,9 +150,9 @@ func (self *Client) tcpCall(method string,ret interface{},params ...interface{})
 
 func (self *Client) Call(method string, ret interface{},params ...interface{}) (err error) {
 
-	switch self.netmode {
+	switch self.net {
 
-	case TCP_CLIENT:
+	case "tcp":
 		{
 			return self.tcpCall(method, ret,params...)
 		}

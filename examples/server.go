@@ -1,6 +1,8 @@
 package main
-import ( "yar"
+import (
+
 	"runtime"
+	"net/rpc"
 )
 
 func test_action(int_num int,float_num float32,str string)(string) {
@@ -11,7 +13,10 @@ func test_action(int_num int,float_num float32,str string)(string) {
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	server := yar.NewServer("0.0.0.0", 6789)
-	server.RegisterHandler("test", test_action)
-	server.Run()
+
+	server :=rpc.NewServer()
+
+	server.Register(test_action)
+
+	server.Accept()
 }
