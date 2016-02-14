@@ -9,7 +9,6 @@ type Response struct {
 	Retval   interface{}   		`json:"r" msgpack:"r"`
 }
 
-
 func NewResponse()(response *Response){
 
 	response = new(Response)

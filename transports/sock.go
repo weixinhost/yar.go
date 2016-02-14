@@ -10,6 +10,8 @@ import (
 type SockConnection struct {
 
 	conn net.Conn
+	requestTime time.Time
+	responseTime time.Time
 }
 
 func newSockConnection(conn net.Conn)(*SockConnection){
@@ -39,6 +41,32 @@ func (conn *SockConnection)SetWriteTimeout(timeout time.Duration){
 	now := time.Now()
 	conn.conn.SetWriteDeadline(now.Add(timeout))
 }
+
+func (conn *SockConnection)GetRemoteAddr() string{
+	addr := conn.conn.RemoteAddr()
+	return addr.String()
+}
+
+
+func (conn *SockConnection)SetRequestTime(t time.Time){
+	conn.requestTime = t
+}
+
+
+func (conn *SockConnection)SetResponseTime(t time.Time){
+	conn.responseTime = t
+}
+
+
+func (conn *SockConnection)GetRequestTime()(t time.Time){
+	return conn.requestTime
+}
+
+
+func (conn *SockConnection)GetResponseTime()(t time.Time){
+	return conn.responseTime
+}
+
 
 type Sock struct {
 	hostname string

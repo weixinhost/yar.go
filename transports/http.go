@@ -13,6 +13,8 @@ type HttpConnection struct {
 	response http.ResponseWriter
 	body []byte
 	use_read int
+	requestTime time.Time
+	responseTime time.Time
 }
 
 
@@ -47,6 +49,34 @@ func(conn *HttpConnection)SetReadTimeout(timeout time.Duration){
 func (conn *HttpConnection)SetWriteTimeout(timeout time.Duration){
 	//its empty.
 }
+
+
+func (conn *HttpConnection)GetRemoteAddr() string{
+	addr := conn.request.RemoteAddr
+	return addr
+}
+
+
+func (conn *HttpConnection)SetRequestTime(t time.Time){
+	conn.requestTime = t
+}
+
+
+func (conn *HttpConnection)SetResponseTime(t time.Time){
+	conn.responseTime = t
+}
+
+
+func (conn *HttpConnection)GetRequestTime()(t time.Time){
+	return conn.requestTime
+}
+
+
+func (conn *HttpConnection)GetResponseTime()(t time.Time){
+	return conn.responseTime
+}
+
+
 
 type Http struct {
 	hostname string

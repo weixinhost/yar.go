@@ -9,6 +9,11 @@ import (
 	"reflect"
 	"fmt"
 	"time"
+	"yar/log"
+)
+
+const (
+	SERVER_OPT_LOG_PATH = "log"
 )
 
 // Yar 服务端
@@ -17,11 +22,13 @@ type Server struct {
 
 	opt 		map[string]interface{}
 	filterList  []ServerFilter
-	filterIdx  int
+	filterIdx  	int
 	handlerList map[string]Handler
+	//handlerParamCache map[string][]reflect.Value
 	netProtocol string
 	hostname 	string
 	transport 	transports.Transport
+	log 		log.Log
 }
 
 //NewServer is easy to create a yar server
@@ -29,9 +36,11 @@ func NewServer(net string,hostname string) (server *Server,err error) {
 
 	server = new(Server)
 	server.handlerList = make(map[string]Handler,32)
+	//';7Userver.handlerParamCache = make(map[string][]reflect.Value,32)
 	server.netProtocol = net
 	server.hostname = hostname
 	server.transport = nil
+	server.opt = make(map[string]interface{},32)
 	return
 }
 
@@ -48,6 +57,15 @@ func(server *Server) AddFilter(filter ServerFilter){
 	server.filterIdx++
 }
 
+func(server *Server)SetOpt(name string,v interface{}){
+	server.opt[name] = v
+}
+
+func(server *Server)GetOpt(name string) interface{} {
+
+	return server.opt[name]
+}
+
 func (server *Server) RemoveHandler(name string) {
 
 	delete(server.handlerList,name)
@@ -56,13 +74,15 @@ func (server *Server) RemoveHandler(name string) {
 
 func (server *Server) OnConnection(conn transports.TransportConnection) {
 
+	conn.SetRequestTime(time.Now())
+
 	defer conn.Close()
 
 	protocol,err := server.getProtocol(conn)
 	response := NewResponse()
 
 	if err != nil {
-		server.sendResponse(conn,response)
+		server.sendResponse(conn,nil,response)
 		return ;
 	}
 	response.Protocol = protocol
@@ -70,7 +90,7 @@ func (server *Server) OnConnection(conn transports.TransportConnection) {
 	if err != nil {
 		response.Error = "get or parse request errror:" + err.Error()
 		response.Status = ERR_TRANSPORT
-		server.sendResponse(conn,response)
+		server.sendResponse(conn,nil,response)
 		return
 	}
 
@@ -84,7 +104,7 @@ func (server *Server) OnConnection(conn transports.TransportConnection) {
 	}
 
 	server.call(request,response)
-	server.sendResponse(conn,response)
+	server.sendResponse(conn,request,response)
 }
 
 
@@ -113,17 +133,19 @@ func (server *Server)init(){
 	case "tcp" , "udp" , "unix": {
 
 		server.transport,_ = transports.NewSock(server.netProtocol,server.hostname)
-
 		break
 	}
 
 	case "http" :{
-		server.transport,_ = transports.NewHttp(server.hostname,"/",5 * time.Second,5 * time.Second)
+		server.transport,_ = transports.NewHttp(server.hostname,"/",server.GetOpt() * time.Second,5 * time.Second)
 		break
 	}
 
 	}
 
+	if server.opt[SERVER_OPT_LOG_PATH] != nil  {
+		server.log ,_ = log.NewFileLog(server.opt[SERVER_OPT_LOG_PATH].(string))
+	}
 }
 
 
@@ -182,20 +204,48 @@ func (server *Server)getRequest(conn transports.TransportConnection,protocol *Pr
 	return request,err
 }
 
-func (server *Server)sendResponse(conn transports.TransportConnection,response *Response)(err error){
+
+func(server *Server)writeLog(conn transports.TransportConnection,level log.LogLevel,fmt string,params...interface{}){
+
+	if server.log != nil {
+
+		server.log.Append(conn,level,fmt,params...)
+	}
+
+}
+
+func (server *Server)sendResponse(conn transports.TransportConnection, request *Request, response *Response) (err error) {
+
+	conn.SetResponseTime(time.Now())
 
 	if response.Protocol != nil {
 
-		sendPackData,err := packager.Pack(response.Protocol.Packager[:],response)
+		sendPackData, err := packager.Pack(response.Protocol.Packager[:], response)
 
 		if err != nil {
-				return err
+			server.writeLog(conn, log.LOG_ERROR, "pack data error:%s", err.Error())
+			return err
 		}
 
-		response.Protocol.BodyLength = uint32(len(sendPackData) +8)
+		if response.Status != ERR_OKEY {
+			if request != nil {
+				server.writeLog(conn, log.LOG_ERROR, "request error:%d %s %s", request.Id, request.Method, response.Error)
+			}else {
+				server.writeLog(conn, log.LOG_ERROR, "request error:%s", response.Error)
+			}
+			return nil
+		}
 
-		conn.Write(response.Protocol.Bytes().Bytes())
-		conn.Write(sendPackData)
+		response.Protocol.BodyLength = uint32(len(sendPackData) + 8)
+
+		_, err = conn.Write(response.Protocol.Bytes().Bytes())
+		_, err = conn.Write(sendPackData)
+
+		if err != nil {
+			server.writeLog(conn, log.LOG_ERROR, "response error:%d %s %s", request.Id, request.Method, err.Error())
+		}else {
+			server.writeLog(conn, log.LOG_NORMAL, "%d %s OKEY", request.Id, request.Method)
+		}
 	}
 
 	return nil

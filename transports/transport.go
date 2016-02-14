@@ -19,6 +19,11 @@ type TransportConnection interface{
 
 	SetReadTimeout(timeout time.Duration)
 	SetWriteTimeout(timeout time.Duration)
+	GetRemoteAddr() 	string
+	GetRequestTime() 	time.Time
+	GetResponseTime() 	time.Time
+	SetRequestTime(time time.Time)
+	SetResponseTime(time time.Time)
 }
 
 type ConnectionHandler func(conn TransportConnection)
