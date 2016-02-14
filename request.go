@@ -12,11 +12,9 @@ type Request struct {
 }
 
 func NewRequest() (request *Request){
-
 	request = new(Request)
 	rand.Seed(time.Now().Unix())
 	request.Id = rand.Uint32()
-
 	return request
 }
 

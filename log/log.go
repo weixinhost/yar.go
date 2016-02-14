@@ -20,3 +20,17 @@ type Log interface {
 	Append(conn transports.TransportConnection,level LogLevel,fmt string,params...interface{})
 	//Query(level LogLevel,start time.Duration,end time.Duration)([]Log)
 }
+
+func LogParseLevel(level LogLevel) string{
+
+	switch level {
+
+	case LOG_DEBUG : {return "Debug"}
+	case LOG_NOTICE: {return "Notice"}
+	case LOG_NORMAL: {return "Normal"}
+	case LOG_WARNING:{return "Warning"}
+	case LOG_ERROR : {return "Error"}
+	}
+
+	return "Unknow"
+}

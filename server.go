@@ -14,6 +14,8 @@ import (
 
 const (
 	SERVER_OPT_LOG_PATH = "log"
+	SERVER_OPT_READ_TIMEOUT = "read_timeout"
+	SERVER_OPT_WRITE_TIMEOUT = "write_timeout"
 )
 
 // Yar 服务端
@@ -41,9 +43,15 @@ func NewServer(net string,hostname string) (server *Server,err error) {
 	server.hostname = hostname
 	server.transport = nil
 	server.opt = make(map[string]interface{},32)
+	server.initServer()
 	return
 }
 
+func (server *Server)initServer(){
+
+	server.SetOpt(SERVER_OPT_READ_TIMEOUT,time.Duration(5))
+	server.SetOpt(SERVER_OPT_WRITE_TIMEOUT,time.Duration(5))
+}
 
 func (server *Server) RegisterHandler(name string ,handler Handler){
 
@@ -77,6 +85,9 @@ func (server *Server) OnConnection(conn transports.TransportConnection) {
 	conn.SetRequestTime(time.Now())
 
 	defer conn.Close()
+
+	conn.SetReadTimeout(server.GetOpt(SERVER_OPT_READ_TIMEOUT).(time.Duration) * time.Second)
+	conn.SetWriteTimeout(server.GetOpt(SERVER_OPT_WRITE_TIMEOUT).(time.Duration) * time.Second)
 
 	protocol,err := server.getProtocol(conn)
 	response := NewResponse()
@@ -137,7 +148,9 @@ func (server *Server)init(){
 	}
 
 	case "http" :{
-		server.transport,_ = transports.NewHttp(server.hostname,"/",server.GetOpt() * time.Second,5 * time.Second)
+		server.transport,_ = transports.NewHttp(server.hostname,"/",
+			server.GetOpt(SERVER_OPT_READ_TIMEOUT).(time.Duration) * time.Second,
+			server.GetOpt(SERVER_OPT_WRITE_TIMEOUT).(time.Duration) * time.Second)
 		break
 	}
 

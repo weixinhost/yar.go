@@ -12,21 +12,26 @@ type Response struct {
 func NewResponse()(response *Response){
 
 	response = new(Response)
-
 	return response
+
 }
 
 func (self *Response) Exception(msg string) {
 
 	self.Status = ERR_OUTPUT
 	self.Error = msg
+
 }
 
 func (self *Response) Output(msg string) {
+
 	self.Out += msg
+
 }
 
 func (self *Response) Return(v interface{}) (err error) {
+
 	self.Retval = v
 	return nil
+
 }
