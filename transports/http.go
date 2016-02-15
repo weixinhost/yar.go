@@ -117,7 +117,6 @@ func (self *Http) Serve()(err error) {
 		Handler:self,
 	}
 
-	s.SetKeepAlivesEnabled(false)
 	err = s.ListenAndServe()
 	fmt.Print(err)
 	return nil
