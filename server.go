@@ -26,8 +26,8 @@ type Server struct {
 	handlerList map[string]Handler
 	netProtocol string
 	hostname 	string
-	transport 	transports.Transport
-	log 		log.Log
+	transport 	*transports.Transport
+	log 		*log.Log
 }
 
 //NewServer is easy to create a yar server
