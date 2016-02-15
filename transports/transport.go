@@ -10,6 +10,7 @@ const (
 
 	CONNECTION_READ_TIMEOUT_SECOND 	= 5
 	CONNECTION_WRITE_TIMEOUT_SECOND = 5
+
 )
 
 type TransportConnection interface{

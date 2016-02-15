@@ -13,7 +13,7 @@ type UUidResponse struct {
 
 func main(){
 
-	client := yar.NewClient("unix","/tmp/a3.sock")
+	client := yar.NewClient("http","http://127.0.0.1:8088")
 
 	ret := new(UUidResponse)
 

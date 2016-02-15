@@ -23,10 +23,7 @@ const (
 type Server struct {
 
 	opt 		map[string]interface{}
-	filterList  []ServerFilter
-	filterIdx  	int
 	handlerList map[string]Handler
-	//handlerParamCache map[string][]reflect.Value
 	netProtocol string
 	hostname 	string
 	transport 	transports.Transport
@@ -38,7 +35,6 @@ func NewServer(net string,hostname string) (server *Server,err error) {
 
 	server = new(Server)
 	server.handlerList = make(map[string]Handler,32)
-	//';7Userver.handlerParamCache = make(map[string][]reflect.Value,32)
 	server.netProtocol = net
 	server.hostname = hostname
 	server.transport = nil
@@ -57,12 +53,6 @@ func (server *Server) RegisterHandler(name string ,handler Handler){
 
 	server.handlerList[name] = handler
 
-}
-
-func(server *Server) AddFilter(filter ServerFilter){
-
-	server.filterList[server.filterIdx] = filter
-	server.filterIdx++
 }
 
 func(server *Server)SetOpt(name string,v interface{}){
@@ -108,11 +98,6 @@ func (server *Server) OnConnection(conn transports.TransportConnection) {
 	request.Id 	= protocol.Id
 	response.Id = request.Id
 	request.Protocol = protocol
-
-	if server.auth(conn,request,response) == false {
-		response.Error 		= "auth failed"
-		response.Status		= ERR_EMPTY_RESPONSE
-	}
 
 	server.call(request,response)
 	server.sendResponse(conn,request,response)
@@ -315,18 +300,3 @@ func (server *Server)call(request *Request,response *Response) {
 		response.Return(rs[0].Interface())
 	}()
 }
-
-func (server *Server) auth(conn transports.TransportConnection,request *Request,response *Response) (ret bool){
-
-	ret = true
-	for _,v := range server.filterList {
-
-		if v(server,conn,request,response) == false {
-			ret = false
-			break
-		}
-	}
-
-	return ret
-}
-
