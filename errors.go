@@ -52,7 +52,6 @@ func (e ErrorEnum) String() string {
 }
 
 type Error struct {
-	error
 	t ErrorEnum
 	m string
 }
@@ -61,7 +60,7 @@ func NewError(t ErrorEnum, m string) *Error {
 	return &Error{t: t, m: m}
 }
 
-func (e *Error) Error() string {
+func (e *Error) String() string {
 	return fmt.Sprintf("[%s] %s", e.t, e.m)
 }
 
