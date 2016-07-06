@@ -46,14 +46,14 @@ func (server *Server) Handle(body []byte, writer io.Writer) *yar.Error {
 	header, err := server.readHeader()
 
 	if err != nil {
-		log.Printf("[YarCall] readHeader error:" + err.Error())
+		log.Printf("[YarCall] readHeader error:" + err.String())
 		return err
 	}
 
 	request, err := server.readRequest(header)
 
 	if err != nil {
-		log.Printf("[YarCall] readResponse error:" + err.Error())
+		log.Printf("[YarCall] readResponse error:" + err.String())
 		return err
 	}
 
