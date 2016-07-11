@@ -137,6 +137,7 @@ func (server *Server) call(request *yar.Request, response *yar.Response) {
 		if r := recover(); r != nil {
 			response.Status = yar.ERR_EMPTY_RESPONSE
 			response.Error = "call handler internal panic:" + fmt.Sprint(r)
+			fmt.Println(r)
 			debug.PrintStack()
 		}
 	}()
