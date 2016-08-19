@@ -78,7 +78,8 @@ func main() {
 	client.Opt.Timeout = 1000 * 30 //30s
 	//这是默认值，目前只支持json
 	client.Opt.Packager = "json"
-
+    client.Opt.DNSCache = true \\开启DNS缓存,一旦开启DNS缓存，将会使用内存进行60秒的内存缓存设置。
+    
     //定义Yar的服务端方法返回值
 	var ret interface{}
 
