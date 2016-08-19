@@ -3,9 +3,12 @@ package client
 import (
 	"bytes"
 	"crypto/tls"
+	"errors"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	yar "github.com/weixinhost/yar.go"
@@ -185,7 +188,23 @@ func (client *Client) httpHandler(method string, ret interface{}, params ...inte
 
 	//todo 停止验证HTTPS请求
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+		MaxIdleConns:        32,
+		MaxIdleConnsPerHost: 32,
+	}
+
+	if client.Opt.DNSCache == true {
+		tr.Dial = func(network string, address string) (net.Conn, error) {
+			separator := strings.LastIndex(address, ":")
+			ips, err := globalResolver.Lookup(address[:separator])
+			if err != nil {
+				return nil, errors.New("Lookup Error:" + err.Error())
+			}
+			if len(ips) < 1 {
+				return nil, errors.New("Lookup Error: No IP Resolver Result Found")
+			}
+			return net.Dial("tcp", ips[0].String()+address[separator:])
+		}
 	}
 
 	httpClient := &http.Client{

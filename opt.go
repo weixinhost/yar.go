@@ -25,6 +25,7 @@ type Opt struct {
 	Encrypt           bool
 	EncryptPrivateKey string
 	DynamicParam      bool
+	DNSCache          bool
 }
 
 func NewOpt() *Opt {
@@ -36,5 +37,6 @@ func NewOpt() *Opt {
 	opt.ConnectTimeout = 1000 * 5
 	opt.Timeout = 30 * 1000
 	opt.DynamicParam = false
+	opt.DNSCache = true
 	return opt
 }
