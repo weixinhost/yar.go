@@ -188,9 +188,7 @@ func (client *Client) httpHandler(method string, ret interface{}, params ...inte
 
 	//todo 停止验证HTTPS请求
 	tr := &http.Transport{
-		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
-		MaxIdleConns:        32,
-		MaxIdleConnsPerHost: 32,
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
 	if client.Opt.DNSCache == true {
