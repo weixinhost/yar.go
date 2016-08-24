@@ -154,13 +154,13 @@ func (client *Client) readResponse(reader io.Reader, ret interface{}) *yar.Error
 		packData, err := packager.Pack([]byte(client.Opt.Packager), response.Retval)
 
 		if err != nil {
-			return yar.NewError(yar.ErrorPackager, "pack response retval error:"+err.Error())
+			return yar.NewError(yar.ErrorPackager, "pack response retval error:"+err.Error()+" "+string(allBody))
 		}
 
 		err = packager.Unpack([]byte(client.Opt.Packager), packData, ret)
 
 		if err != nil {
-			return yar.NewError(yar.ErrorPackager, "pack response retval error:"+err.Error())
+			return yar.NewError(yar.ErrorPackager, "pack response retval error:"+err.Error()+" "+string(allBody))
 		}
 	}
 
