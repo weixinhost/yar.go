@@ -67,7 +67,7 @@ func (server *Server) Handle(body []byte, writer io.Writer) *yar.Error {
 		log.Printf("[YarCall] %d %s Error:%s\n", request.Id, request.Method, response.Error)
 		return yar.NewError(yar.ErrorResponse, response.Error)
 	} else {
-		log.Printf("[YarCall] %d %s %s\n", request.Id, request.Method, "OKEY")
+		//log.Printf("[YarCall] %d %s %s\n", request.Id, request.Method, "OKEY")
 	}
 	return nil
 }
