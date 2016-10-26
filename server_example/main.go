@@ -21,8 +21,9 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := ioutil.ReadAll(r.Body)
 		s := server.NewServer(&YarClass{})
-
 		s.Opt.MagicNumber = yar.MagicNumber
+		s.Opt.LogLevel = yar.LogLevelDebug | yar.LoglevelNormal | yar.LogLevelError
+		s.Opt.LogLevel = yar.LogLevelDebug
 		s.Register("echo", "Echo")
 		//这里接收完整的request body与一个 Writer，可以和任意web框架结合
 		//数据通过Writer进行写回

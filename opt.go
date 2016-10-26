@@ -17,6 +17,12 @@ const (
 	YarOptEncryptPrivateKey = 6
 )
 
+const (
+	LogLevelDebug  int = 0x0001
+	LoglevelNormal int = 0x0002
+	LogLevelError  int = 0x0004
+)
+
 type Opt struct {
 	MagicNumber       uint32
 	Timeout           uint32
@@ -26,6 +32,7 @@ type Opt struct {
 	EncryptPrivateKey string
 	DynamicParam      bool
 	DNSCache          bool
+	LogLevel          int
 }
 
 func NewOpt() *Opt {
@@ -38,5 +45,6 @@ func NewOpt() *Opt {
 	opt.Timeout = 30 * 1000
 	opt.DynamicParam = false
 	opt.DNSCache = true
+	opt.LogLevel = LogLevelError
 	return opt
 }

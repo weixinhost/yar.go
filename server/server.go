@@ -32,6 +32,7 @@ func NewServer(class interface{}) *Server {
 }
 
 func (server *Server) Register(rpcName string, methodName string) {
+	server.log(yar.LogLevelDebug, "Register Handler %s %s", rpcName, methodName)
 	server.methodMap[strings.ToLower(rpcName)] = methodName
 }
 
@@ -46,14 +47,14 @@ func (server *Server) Handle(body []byte, writer io.Writer) *yar.Error {
 	header, err := server.readHeader()
 
 	if err != nil {
-		log.Printf("[YarCall] readHeader error:" + err.String())
+		server.log(yar.LogLevelError, "[YarCall] readHeader error:%s", err.String())
 		return err
 	}
 
 	request, err := server.readRequest(header)
 
 	if err != nil {
-		log.Printf("[YarCall] readResponse error:" + err.String())
+		server.log(yar.LogLevelError, "[YarCall] readResponse error:%s", err.String())
 		return err
 	}
 
@@ -64,10 +65,10 @@ func (server *Server) Handle(body []byte, writer io.Writer) *yar.Error {
 	server.call(request, response)
 	server.sendResponse(response)
 	if response.Status != yar.ERR_OKEY {
-		log.Printf("[YarCall] %d %s Error:%s\n", request.Id, request.Method, response.Error)
+		server.log(yar.LogLevelError, "[YarCall] %d %s Error:%s\n", request.Id, request.Method, response.Error)
 		return yar.NewError(yar.ErrorResponse, response.Error)
 	} else {
-		log.Printf("[YarCall] %d %s %s\n", request.Id, request.Method, "OKEY")
+		server.log(yar.LoglevelNormal, "[YarCall] %d %s %s\n", request.Id, request.Method, "OKEY")
 	}
 	return nil
 }
@@ -103,9 +104,8 @@ func (server *Server) readHeader() (*yar.Header, *yar.Error) {
 }
 
 func (server *Server) readRequest(header *yar.Header) (*yar.Request, *yar.Error) {
-
+	server.log(yar.LogLevelDebug, "[readRequest] %d %s %d %d", header.Id, header.Packager, header.MagicNumber, header.BodyLength)
 	bodyLen := header.BodyLength
-
 	bodyBuffer := server.body[90 : 90+bodyLen-8]
 
 	request := yar.NewRequest()
@@ -120,6 +120,7 @@ func (server *Server) readRequest(header *yar.Header) (*yar.Request, *yar.Error)
 }
 
 func (server *Server) sendResponse(response *yar.Response) *yar.Error {
+	server.log(yar.LogLevelDebug, "[sendResponse] %d %d %s", response.Id, response.Status, fmt.Sprint(response.Retval))
 	sendPackData, err := packager.Pack(response.Protocol.Packager[:], response)
 	if err != nil {
 		return yar.NewError(yar.ErrorResponse, err.Error())
@@ -137,8 +138,10 @@ func (server *Server) call(request *yar.Request, response *yar.Response) {
 		if r := recover(); r != nil {
 			response.Status = yar.ERR_EMPTY_RESPONSE
 			response.Error = "call handler internal panic:" + fmt.Sprint(r)
-			fmt.Println(r)
-			debug.PrintStack()
+			if server.Opt.LogLevel&yar.LogLevelError > 0 {
+				fmt.Println(r)
+				debug.PrintStack()
+			}
 		}
 	}()
 
@@ -472,8 +475,13 @@ func (server *Server) call(request *yar.Request, response *yar.Response) {
 			response.Error = "unsupprted multi value return on rpc call"
 			return
 		}
-
 		response.Return(rs[0].Interface())
 	}()
+}
 
+func (server *Server) log(level int, logFmt string, v ...interface{}) {
+	if level&server.Opt.LogLevel >= level {
+		log.Printf(logFmt, v...)
+		log.Println("")
+	}
 }

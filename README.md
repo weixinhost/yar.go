@@ -41,6 +41,13 @@ func main() {
 		body, _ := ioutil.ReadAll(r.Body)
 		//得到一个server实例
         s := server.NewServer(&YarClass{})
+
+        //开启全部等级日志
+        s.Opt.LogLevel =  yar.LogLevelDebug | yar.LoglevelNormal | yar.LogLevelError
+        
+        //只显示错误日志
+        s.Opt.LogLevel = yar.LogLevelError
+
         //注册方法,由于Golang对方法名有规定，所以提供了一个Register方法来注册方法别名。
         //当然，如果Yar客户端直接使用Echo来发起调用的话，则不需要这里注册一次
 		s.Register("echo", "Echo")
