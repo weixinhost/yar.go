@@ -190,7 +190,7 @@ func (client *Client) httpHandler(method string, ret interface{}, params ...inte
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
-
+	tr.DisableKeepAlives = true
 	if client.Opt.DNSCache == true {
 		tr.Dial = func(network string, address string) (net.Conn, error) {
 			separator := strings.LastIndex(address, ":")

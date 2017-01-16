@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/weixinhost/yar.go"
+	yar "github.com/weixinhost/yar.go"
 	"github.com/weixinhost/yar.go/client"
 )
 
@@ -37,5 +37,4 @@ func main() {
 	}
 
 	fmt.Println("data", ret)
-
 }
