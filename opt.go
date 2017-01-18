@@ -24,6 +24,9 @@ const (
 )
 
 type Opt struct {
+	CheckRequest      bool
+	Provider          string
+	ServiceName       string
 	MagicNumber       uint32
 	Timeout           uint32
 	ConnectTimeout    uint32
@@ -46,5 +49,15 @@ func NewOpt() *Opt {
 	opt.DynamicParam = false
 	opt.DNSCache = true
 	opt.LogLevel = LogLevelError
+	opt.CheckRequest = false
 	return opt
+}
+
+func StrToFixedBytes(str string, l int) []byte {
+	if len(str) >= l {
+		return []byte(str[:l])
+	}
+	ret := []byte(str)
+	pading := make([]byte, l-len(ret))
+	return append(ret, pading...)
 }

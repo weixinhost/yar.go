@@ -69,6 +69,16 @@ func (client *Client) initRequest(method string, params ...interface{}) (*yar.Re
 
 	r := yar.NewRequest()
 
+	bs := yar.StrToFixedBytes(client.Opt.Provider, 28)
+	for i := 0; i < len(r.Protocol.Provider); i++ {
+		r.Protocol.Provider[i] = bs[i]
+	}
+
+	cs := yar.StrToFixedBytes(client.Opt.ServiceName, 32)
+	for i := 0; i < len(r.Protocol.Token); i++ {
+		r.Protocol.Token[i] = cs[i]
+	}
+
 	if len(method) < 1 {
 		return nil, yar.NewError(yar.ErrorParam, "call empty method")
 	}
