@@ -2,15 +2,16 @@ package client
 
 import (
 	"bytes"
-	"crypto/tls"
 	"errors"
 	"io"
 	"io/ioutil"
 	"net"
-	"net/http"
 	"strings"
 	"time"
 
+	"crypto/tls"
+
+	"github.com/valyala/fasthttp"
 	yar "github.com/weixinhost/yar.go"
 	"github.com/weixinhost/yar.go/packager"
 	"github.com/weixinhost/yar.go/transports"
@@ -21,6 +22,34 @@ type Client struct {
 	net       string
 	transport transports.Transport
 	Opt       *yar.Opt
+}
+
+var httpClient *fasthttp.Client
+var dnsCacheHttpClient *fasthttp.Client
+
+func init() {
+	httpClient = &fasthttp.Client{}
+	httpClient.MaxIdleConnDuration = 5 * time.Second
+	httpClient.TLSConfig = &tls.Config{
+		InsecureSkipVerify: true,
+	}
+
+	dnsCacheHttpClient = &fasthttp.Client{}
+	dnsCacheHttpClient.MaxIdleConnDuration = 5 * time.Second
+	dnsCacheHttpClient.TLSConfig = &tls.Config{
+		InsecureSkipVerify: true,
+	}
+	dnsCacheHttpClient.Dial = func(address string) (net.Conn, error) {
+		separator := strings.LastIndex(address, ":")
+		ips, err := globalResolver.Lookup(address[:separator])
+		if err != nil {
+			return nil, errors.New("Lookup Error:" + err.Error())
+		}
+		if len(ips) < 1 {
+			return nil, errors.New("Lookup Error: No IP Resolver Result Found")
+		}
+		return net.Dial("tcp", ips[0].String()+address[separator:])
+	}
 }
 
 // 获取一个YAR 客户端
@@ -196,37 +225,27 @@ func (client *Client) httpHandler(method string, ret interface{}, params ...inte
 	postBuffer := bytes.NewBuffer(r.Protocol.Bytes().Bytes())
 	postBuffer.Write(packBody)
 
-	//todo 停止验证HTTPS请求
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	tr.DisableKeepAlives = true
-	if client.Opt.DNSCache == true {
-		tr.Dial = func(network string, address string) (net.Conn, error) {
-			separator := strings.LastIndex(address, ":")
-			ips, err := globalResolver.Lookup(address[:separator])
-			if err != nil {
-				return nil, errors.New("Lookup Error:" + err.Error())
-			}
-			if len(ips) < 1 {
-				return nil, errors.New("Lookup Error: No IP Resolver Result Found")
-			}
-			return net.Dial("tcp", ips[0].String()+address[separator:])
-		}
+	hClient := httpClient
+
+	if client.Opt.DNSCache {
+		hClient = dnsCacheHttpClient
 	}
 
-	httpClient := &http.Client{
-		Transport: tr,
-		Timeout:   time.Duration(client.Opt.Timeout) * time.Millisecond,
-	}
+	request := fasthttp.Request{}
+	request.SetBody(postBuffer.Bytes())
+	request.SetRequestURI(client.hostname)
+	request.Header.SetMethod("POST")
+	request.SetConnectionClose()
 
-	resp, postErr := httpClient.Post(client.hostname, "application/json", postBuffer)
+	var resp fasthttp.Response
+
+	postErr := hClient.DoTimeout(&request, &resp, time.Duration(client.Opt.Timeout)*time.Millisecond)
 
 	if postErr != nil {
 		return yar.NewError(yar.ErrorNetwork, postErr.Error())
 	}
-
-	responseErr := client.readResponse(resp.Body, ret)
+	body := bytes.NewBuffer(resp.Body())
+	responseErr := client.readResponse(body, ret)
 	return responseErr
 }
 
