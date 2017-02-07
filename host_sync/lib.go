@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"time"
 
 	"regexp"
@@ -61,13 +60,11 @@ func GetHostListFromDockerAPI(pool string, name string) ([]string, error) {
 	}
 
 	query, err := json.Marshal(filters)
-
 	if err != nil {
 		return nil, err
 	}
 
-	api := fmt.Sprintf(`%s/containers/json?filters=%s`, dockerAPI, url.QueryEscape(string(query)))
-
+	api := fmt.Sprintf(`%s/containers/json?all=1&filters=%s`, dockerAPI, string(query))
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
@@ -89,7 +86,6 @@ func GetHostListFromDockerAPI(pool string, name string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	var list []string
 
 	var lstContainers []map[string]interface{}
@@ -98,6 +94,49 @@ func GetHostListFromDockerAPI(pool string, name string) ([]string, error) {
 
 	if err != nil {
 		return nil, err
+	}
+
+	if len(lstContainers) < 1 {
+		filters := map[string][]string{
+			"label": []string{
+				fmt.Sprintf(`com.docker.swarm.constraints=["pool==%s"]`, pool),
+				fmt.Sprintf("com.docker.compose.service=%s", name),
+			},
+		}
+
+		query, err := json.Marshal(filters)
+		if err != nil {
+			return nil, err
+		}
+
+		api := fmt.Sprintf(`%s/containers/json?all=1&filters=%s`, dockerAPI, string(query))
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		tr.DisableKeepAlives = true
+
+		httpClient := &http.Client{}
+		httpClient.Timeout = 5 * time.Second
+		httpClient.Transport = tr
+
+		resp, err := httpClient.Get(api)
+		if err != nil {
+			return nil, err
+		}
+
+		defer resp.Body.Close()
+
+		body, err := ioutil.ReadAll(resp.Body)
+
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal(body, &lstContainers)
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	for _, item := range lstContainers {
@@ -135,10 +174,25 @@ func GetHostListFromRedis(pool string, name string) ([]string, error) {
 	}
 
 	val := ret.Val()
-	log.Println(val)
 	var host []string
 	err := json.Unmarshal([]byte(val), &host)
 	return host, err
+}
+
+func GetHostList(pool string, name string) ([]string, error) {
+
+	lst, err := GetHostListFromRedis(pool, name)
+
+	if err == nil {
+		return lst, nil
+	}
+
+	lst, err = GetHostListFromDockerAPI(pool, name)
+	if err == nil {
+		return lst, nil
+	}
+
+	return nil, err
 }
 
 func SetHostListToRedis(pool, name string, list []string) error {
@@ -198,23 +252,18 @@ func SyncAllHostList() error {
 	}
 
 	for _, item := range lstContainers {
-
 		labels, ok := item["Labels"].(map[string]interface{})
-
 		if !ok {
 			continue
 		}
-
 		service, ok := labels["com.docker.compose.service"].(string)
 		if !ok {
 			continue
 		}
 		pool, ok := labels["com.docker.swarm.constraints"].(string)
-
 		if !ok {
 			continue
 		}
-
 		wxhostService, ok := labels["wxhost-service-name"].(string)
 
 		if ok && len(wxhostService) > 0 {

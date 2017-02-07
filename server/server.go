@@ -83,14 +83,6 @@ func (server *Server) readHeader() (*yar.Header, *yar.Error) {
 		return nil, yar.NewError(yar.ErrorProtocol, "magic number check failed.")
 	}
 
-	if server.Opt.CheckRequest {
-		remote := string(header.Token[:])
-		local := string(yar.StrToFixedBytes(server.Opt.ServiceName, 32))
-		if remote != local {
-			return nil, yar.NewError(yar.ErrorProtocol, "mismatch service name:local service name:"+local+",remote service name:"+remote)
-		}
-	}
-
 	encrypt := server.Opt.Encrypt
 	encryptKey := ""
 
@@ -106,6 +98,15 @@ func (server *Server) readHeader() (*yar.Header, *yar.Error) {
 
 	if header.Encrypt == 0 && encrypt == true {
 		return nil, yar.NewError(yar.ErrorProtocol, "this server is encrypt,but request is not encrypt mode")
+	}
+
+	serviceName := string(header.Token[:])
+
+	if server.Opt.CheckRequest {
+		s1 := yar.StrToFixedBytes(server.Opt.ServiceName, 32)
+		if serviceName != string(s1) {
+			return nil, yar.NewError(yar.ErrorProtocol, "mismatch service name: "+string(s1)+"!="+serviceName)
+		}
 	}
 
 	return header, nil

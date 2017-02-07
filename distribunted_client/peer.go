@@ -2,10 +2,12 @@ package distribunted_client
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/weixinhost/yar.go/host_sync"
+	"github.com/weixinhost/yar.go/monitor"
 )
 
 const (
@@ -26,6 +28,7 @@ type Peer struct {
 	failMutex     sync.Mutex
 	hostMutext    sync.Mutex
 	hostLastIndex int
+	lastAlarmTime time.Time
 }
 
 func NewPeer(pool, name string) *Peer {
@@ -40,14 +43,16 @@ func (p *Peer) GetNextHost() (string, error) {
 
 	now := time.Now()
 	if int(now.Sub(p.lastSyncTime).Seconds()) > defaultSyncInterval {
-		p.syncHostListFromRedis()
+		p.syncHostList()
 	}
 
 	p.hostMutext.Lock()
 	defer p.hostMutext.Unlock()
 
 	if len(p.hostList) < 1 {
-		return "", errors.New("No Host Not Found")
+		msg := fmt.Sprintf(" Pool:%s \n Yar Service: %s \n No Host Found", p.pool, p.name)
+		p.Alerm("", msg)
+		return "", errors.New("Host Not Found")
 	}
 	first := p.hostLastIndex
 	for {
@@ -61,6 +66,8 @@ func (p *Peer) GetNextHost() (string, error) {
 			break
 		}
 	}
+	msg := fmt.Sprintf(" Pool:%s \n Yar Service: %s \n No Health Host Found", p.pool, p.name)
+	p.Alerm("", msg)
 	return "", errors.New("No Health Host Found")
 }
 
@@ -70,21 +77,28 @@ func (p *Peer) SyncHostList(list []string) {
 	p.hostList = list
 }
 
-func (p *Peer) syncHostListFromRedis() {
+func (p *Peer) Alerm(addr string, msg string) {
+
+	monitor.RealTimeMonitor(p.pool, p.name, addr, msg)
+}
+
+func (p *Peer) syncHostList() {
 	p.hostMutext.Lock()
 	defer p.hostMutext.Unlock()
-	lst, err := host_sync.GetHostListFromRedis(p.pool, p.name)
+	lst, err := host_sync.GetHostList(p.pool, p.name)
 	if err == nil {
 		p.hostList = lst
 		p.lastSyncTime = time.Now()
 	}
 
-	p.hostList = []string{
-		"127.0.0.1:8501",
-		"127.0.0.1:8502",
-		"127.0.0.1:8503",
-		"127.0.0.1:8504",
-	}
+	/*
+		p.hostList = []string{
+			"127.0.0.1:8501",
+			"127.0.0.1:8502",
+			"127.0.0.1:8503",
+			"127.0.0.1:8504",
+		}
+	*/
 
 }
 
@@ -156,8 +170,17 @@ func (p *Peer) isAllow(ip string) bool {
 	}
 
 	//monitor
-	if c <= 20 && f > 360.0 {
+	if c <= 20 && f > 180.0 {
 		return true
+	}
+
+	if f > 360.0 {
+		return true
+	}
+
+	if c > 10 {
+		msg := fmt.Sprintf(" Pool:%s \n Yar Service Container: %s \n Failed Total: %d", p.pool, ip, c)
+		p.Alerm(ip, msg)
 	}
 
 	return false
