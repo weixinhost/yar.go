@@ -27,17 +27,19 @@ func printlnWelcome() {
 
 type Handle func(body []byte, writer io.Writer)
 
+type InitServer func() *Server
+
 type HttpServer struct {
-	handle map[string]*Server
+	handle map[string]InitServer
 }
 
 func NewHttpServer() *HttpServer {
 	server := new(HttpServer)
-	server.handle = make(map[string]*Server, 0)
+	server.handle = make(map[string]InitServer, 0)
 	return server
 }
 
-func (server *HttpServer) RegisterHandle(path string, h *Server) {
+func (server *HttpServer) RegisterHandle(path string, h InitServer) {
 	server.handle[path] = h
 }
 
@@ -66,12 +68,14 @@ func (server *HttpServer) innerHandle(ctx *fasthttp.RequestCtx) {
 	p := ctx.Path()
 	path := string(p)
 
-	h, ok := server.handle[path]
+	hf, ok := server.handle[path]
 
 	if !ok {
 		log.Println("No Yar Server Found On Path:" + path)
 		return
 	}
+
+	h := hf()
 
 	buf := bytes.NewBufferString("")
 

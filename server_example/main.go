@@ -10,11 +10,13 @@ func (c *YarClass) Echo(str interface{}) interface{} {
 
 func main() {
 	//构建一个Yar Server
-	yar := server.NewServer(&YarClass{})
+
 	//基于FastHttp 构建的Server
 	httpServer := server.NewHttpServer()
 	//注册路由
-	httpServer.RegisterHandle("/", yar)
+	httpServer.RegisterHandle("/", func() *server.Server {
+		return server.NewServer(&YarClass{})
+	})
 	//启动Serve
 	httpServer.Serve(":8080")
 }
