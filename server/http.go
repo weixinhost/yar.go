@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"runtime/debug"
 
 	"github.com/valyala/fasthttp"
 )
@@ -53,6 +54,14 @@ func (server *HttpServer) Serve(addr string) {
 }
 
 func (server *HttpServer) innerHandle(ctx *fasthttp.RequestCtx) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println(r)
+			debug.PrintStack()
+		}
+	}()
+
 	body := ctx.PostBody()
 	p := ctx.Path()
 	path := string(p)

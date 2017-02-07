@@ -75,7 +75,7 @@ func (server *Server) Handle(body []byte, writer io.Writer) *yar.Error {
 
 func (server *Server) readHeader() (*yar.Header, *yar.Error) {
 
-	headerBuffer := bytes.NewBuffer(server.body[0 : yar.ProtocolLength+yar.ProtocolLength])
+	headerBuffer := bytes.NewBuffer(server.body[0 : yar.ProtocolLength+yar.PackagerLength])
 
 	header := yar.NewHeaderWithBytes(headerBuffer)
 
