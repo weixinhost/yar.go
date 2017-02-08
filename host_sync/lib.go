@@ -300,6 +300,7 @@ func SyncAllHostList() error {
 	for pool, lst1 := range list {
 		changed := 0
 		for service, hostList := range lst1 {
+			SetHostListToRedis(pool, service, hostList)
 			key := fmt.Sprintf("%s_%s", pool, service)
 			sum, ok := hostCheckSum[key]
 			n, _ := json.Marshal(hostList)
@@ -310,7 +311,6 @@ func SyncAllHostList() error {
 			if ok && sum == s {
 				continue
 			}
-			SetHostListToRedis(pool, service, hostList)
 			hostCheckSum[key] = s
 			changed++
 		}
