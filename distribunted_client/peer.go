@@ -42,7 +42,7 @@ func NewPeer(pool, name string) *Peer {
 	return peer
 }
 
-func (p *Peer) FailHost() []stirng {
+func (p *Peer) FailHost() []string {
 	var fail []string
 	p.hostMutext.Lock()
 	for _, v := range p.hostList {
@@ -50,11 +50,11 @@ func (p *Peer) FailHost() []stirng {
 			fail = append(fail, v)
 		}
 	}
+	return fail
 }
 
 func (p *Peer) GetNextHost() (string, error) {
 
-	//	log.Println("host list", len(p.hostList), p.hostList)
 	now := time.Now()
 	if int(now.Sub(p.lastSyncTime).Seconds()) > defaultSyncInterval {
 		go p.syncHostList()
