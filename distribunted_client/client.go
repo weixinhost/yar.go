@@ -13,6 +13,20 @@ import (
 	"github.com/weixinhost/yar.go/monitor"
 )
 
+const (
+	modeDebug int = 1
+)
+
+var mode int
+
+func OpenDebug() {
+	mode = modeDebug
+}
+
+func CloseDebug() {
+	mode = 0
+}
+
 var pool *PeerPool
 
 type Client struct {
@@ -49,6 +63,10 @@ func (self *Client) Call(method string, ret interface{}, params ...interface{}) 
 		c++
 
 		failLen := len(p.FailHost())
+
+		if mode == modeDebug {
+			log.Printf("[Yar Debug]: %s %s current: %s ,host total: %d ,fail host total:%d\n", self.pool, self.name, host, hostLen, failLen)
+		}
 
 		u := fmt.Sprintf("%s://%s/%s", self.protocol, host, self.path)
 		c, aerr := client.NewClient(u)

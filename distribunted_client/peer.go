@@ -1,8 +1,10 @@
 package distribunted_client
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -59,6 +61,11 @@ func (p *Peer) GetNextHost() (string, error) {
 	now := time.Now()
 	if int(now.Sub(p.lastSyncTime).Seconds()) > defaultSyncInterval {
 		go p.syncHostList()
+	}
+
+	if mode == modeDebug {
+		s, _ := json.Marshal(p.hostList)
+		log.Printf("[Yar Debug]: %s %s host list: %s, last sync:%s", p.pool, p.name, string(s), now.Sub(p.lastSyncTime).String())
 	}
 
 	if len(p.hostList) < 1 {

@@ -23,6 +23,7 @@ var redisClient *redis.Client
 var redisPrefix string = "__yar_host_sync__:"
 
 var hostCheckSum map[string]string
+var hostLencache map[string]int
 var nohostCache map[string]int
 var nohostMutex sync.Mutex
 var httpClient *http.Client
@@ -302,16 +303,15 @@ func SyncAllHostList() error {
 		for service, hostList := range lst1 {
 			SetHostListToRedis(pool, service, hostList)
 			key := fmt.Sprintf("%s_%s", pool, service)
-			sum, ok := hostCheckSum[key]
+			sum := hostCheckSum[key]
 			n, _ := json.Marshal(hostList)
 			s := hex.EncodeToString(n[:])
 			if sum == s {
 				continue
 			}
-			if ok && sum == s {
-				continue
-			}
+			log.Printf("[SyncAllHostList] changed service:%s %s %d to %d", pool, service, hostLencache[key], len(hostList))
 			hostCheckSum[key] = s
+			hostLencache[key] = len(service)
 			changed++
 		}
 		log.Printf("[SyncAllHostList] %s services:%d changed:%d", pool, len(lst1), changed)
