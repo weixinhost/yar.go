@@ -16,7 +16,7 @@ import (
 func syncList(dataList []*monitor.MonitorData) {
 
 	cloudWatchRequest := make(map[string]interface{})
-	cloudWatchRequest["Namespace"] = "yar-server-monitor-dev"
+	cloudWatchRequest["Namespace"] = "yar-server-monitor"
 	metricData := make([]map[string]interface{}, 0)
 
 	buildKey := make(map[string]*monitor.MonitorData)
@@ -63,7 +63,7 @@ func syncList(dataList []*monitor.MonitorData) {
 			item := map[string]interface{}{
 				"MetricName": "ContainerTotal",
 				"Unit":       "count",
-				"Value":      v.FailTotal,
+				"Value":      v.DownHostTotal,
 				"Timestamp":  t.Format(time.RFC3339Nano),
 				"Dimensions": []map[string]interface{}{
 					map[string]interface{}{
@@ -133,10 +133,6 @@ func syncList(dataList []*monitor.MonitorData) {
 					map[string]interface{}{
 						"Name":  "Pool",
 						"Value": v.Pool,
-					},
-					map[string]interface{}{
-						"Name":  "Result",
-						"Value": "Fail",
 					},
 				},
 			}
@@ -193,7 +189,7 @@ func syncList(dataList []*monitor.MonitorData) {
 			item := map[string]interface{}{
 				"MetricName": "ContainerTotal",
 				"Unit":       "count",
-				"Value":      v.FailTotal,
+				"Value":      v.DownHostTotal,
 				"Timestamp":  t.Format(time.RFC3339Nano),
 				"Dimensions": []map[string]interface{}{
 					map[string]interface{}{
@@ -279,10 +275,6 @@ func syncList(dataList []*monitor.MonitorData) {
 					map[string]interface{}{
 						"Name":  "Name",
 						"Value": v.Name,
-					},
-					map[string]interface{}{
-						"Name":  "Result",
-						"Value": "Fail",
 					},
 				},
 			}
