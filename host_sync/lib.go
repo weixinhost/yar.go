@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"regexp"
@@ -22,6 +23,8 @@ var redisClient *redis.Client
 var redisPrefix string = "__yar_host_sync__:"
 
 var hostCheckSum map[string]string
+var nohostCache map[string]int
+var nohostMutex sync.Mutex
 var httpClient *http.Client
 
 func init() {
@@ -138,6 +141,17 @@ func GetHostListFromDockerAPI(pool string, name string) ([]string, error) {
 		}
 	}
 
+	key := fmt.Sprintf("%s-%s", pool, name)
+
+	nohostMutex.Lock()
+	not := nohostCache[key]
+	if len(lstContainers) < 1 && not < 3 {
+		nohostCache[key] = not + 1
+		nohostMutex.Unlock()
+		return nil, nil
+	}
+	nohostMutex.Unlock()
+	delete(nohostCache, key)
 	for _, item := range lstContainers {
 		ports, ok := item["Ports"].([]interface{})
 		if ok {
@@ -182,7 +196,7 @@ func GetHostList(pool string, name string) ([]string, error) {
 
 	lst, err := GetHostListFromRedis(pool, name)
 
-	if err == nil {
+	if err == nil && len(lst) > 1 {
 		return lst, nil
 	}
 
@@ -198,16 +212,13 @@ func SetHostListToRedis(pool, name string, list []string) error {
 	if redisClient == nil {
 		return errors.New("Please Call SetRedisHost()")
 	}
-
 	jsonStr, err := json.Marshal(list)
 
 	if err != nil {
 		return err
 	}
-
 	key := fmt.Sprintf("%s%s:%s", redisPrefix, pool, name)
-	ret := redisClient.Set(key, jsonStr, 3600*24*7*time.Second)
-
+	ret := redisClient.Set(key, jsonStr, 600*time.Second)
 	if ret.Err() != nil {
 		return ret.Err()
 	}

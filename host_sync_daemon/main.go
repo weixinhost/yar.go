@@ -29,6 +29,6 @@ func main() {
 		if err != nil {
 			log.Println(err)
 		}
-		time.Sleep(time.Duration((3 + rand.Intn(5))) * time.Second)
+		time.Sleep(time.Duration((5 + rand.Intn(3))) * time.Second)
 	}
 }
