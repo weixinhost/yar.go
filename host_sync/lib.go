@@ -196,7 +196,7 @@ func GetHostList(pool string, name string) ([]string, error) {
 
 	lst, err := GetHostListFromRedis(pool, name)
 
-	if err == nil && len(lst) > 1 {
+	if err == nil {
 		return lst, nil
 	}
 
