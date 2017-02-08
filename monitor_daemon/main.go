@@ -36,12 +36,24 @@ func syncList(dataList []*monitor.MonitorData) {
 	for _, v := range buildKey {
 		t := time.Unix(int64(v.Time), 0)
 
+		tt := v.SuccessTotal + v.FailTotal
+
+		ht := float64(v.HostTotal)
+		dt := float64(v.DownHostTotal)
+		if v.HostTotal > 0 && tt > 0 {
+			ht = float64(v.HostTotal) / float64(tt)
+		}
+
+		if v.DownHostTotal > 0 && tt > 0 {
+			dt = float64(v.DownHostTotal) / float64(tt)
+		}
+
 		{
 
 			item := map[string]interface{}{
 				"MetricName": "ContainerTotal",
-				"Unit":       "count",
-				"Value":      v.HostTotal,
+				"Unit":       "Count",
+				"Value":      ht,
 				"Timestamp":  t.Format(time.RFC3339Nano),
 				"Dimensions": []map[string]interface{}{
 					map[string]interface{}{
@@ -62,8 +74,8 @@ func syncList(dataList []*monitor.MonitorData) {
 
 			item := map[string]interface{}{
 				"MetricName": "ContainerTotal",
-				"Unit":       "count",
-				"Value":      v.DownHostTotal,
+				"Unit":       "Count",
+				"Value":      dt,
 				"Timestamp":  t.Format(time.RFC3339Nano),
 				"Dimensions": []map[string]interface{}{
 					map[string]interface{}{
@@ -157,21 +169,29 @@ func syncList(dataList []*monitor.MonitorData) {
 	for _, v := range buildKey {
 		t := time.Unix(int64(v.Time), 0)
 
+		tt := v.SuccessTotal + v.FailTotal
+
+		ht := float64(v.HostTotal)
+		dt := float64(v.DownHostTotal)
+		if v.HostTotal > 0 && tt > 0 {
+			ht = float64(v.HostTotal) / float64(tt)
+		}
+
+		if v.DownHostTotal > 0 && tt > 0 {
+			dt = float64(v.DownHostTotal) / float64(tt)
+		}
+
 		{
 
 			item := map[string]interface{}{
 				"MetricName": "ContainerTotal",
-				"Unit":       "count",
-				"Value":      v.HostTotal,
+				"Unit":       "Count",
+				"Value":      ht,
 				"Timestamp":  t.Format(time.RFC3339Nano),
 				"Dimensions": []map[string]interface{}{
 					map[string]interface{}{
 						"Name":  "Pool",
 						"Value": v.Pool,
-					},
-					map[string]interface{}{
-						"Name":  "Name",
-						"Value": v.Name,
 					},
 					map[string]interface{}{
 						"Name":  "State",
@@ -181,24 +201,19 @@ func syncList(dataList []*monitor.MonitorData) {
 			}
 
 			metricData = append(metricData, item)
-
 		}
 
 		{
 
 			item := map[string]interface{}{
 				"MetricName": "ContainerTotal",
-				"Unit":       "count",
-				"Value":      v.DownHostTotal,
+				"Unit":       "Count",
+				"Value":      dt,
 				"Timestamp":  t.Format(time.RFC3339Nano),
 				"Dimensions": []map[string]interface{}{
 					map[string]interface{}{
 						"Name":  "Pool",
 						"Value": v.Pool,
-					},
-					map[string]interface{}{
-						"Name":  "Name",
-						"Value": v.Name,
 					},
 					map[string]interface{}{
 						"Name":  "State",

@@ -50,6 +50,7 @@ func (p *Peer) FailHost() []string {
 			fail = append(fail, v)
 		}
 	}
+	p.hostMutext.Unlock()
 	return fail
 }
 

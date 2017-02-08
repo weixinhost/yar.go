@@ -38,7 +38,6 @@ func (self *Client) Call(method string, ret interface{}, params ...interface{}) 
 	c := 0
 	for {
 		host, err := p.GetNextHost()
-		//	log.Println("choose host", host)
 		if err != nil {
 			return yar.NewError(yar.ErrorNetwork, err.Error())
 		}

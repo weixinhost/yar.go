@@ -48,12 +48,10 @@ func Setup(redisHost string, h RealTimeMonitorHandle) {
 	opt.ReadTimeout = 10 * time.Second
 	opt.MaxRetries = 3
 	redisClient = redis.NewClient(opt)
-
 	go SyncLogToRedis()
 }
 
 func SetServiceMonitor(pool, name, provider string, requestTime int, healthHostTotal int, downHostTotal int, isSuccess bool) {
-
 	if redisClient == nil {
 		return
 	}
@@ -91,6 +89,8 @@ func SetServiceMonitor(pool, name, provider string, requestTime int, healthHostT
 		} else {
 			m.FailTotal++
 		}
+		m.HostTotal += healthHostTotal
+		m.DownHostTotal += downHostTotal
 	}
 	cacheMutex.Unlock()
 }
