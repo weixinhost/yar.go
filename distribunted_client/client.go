@@ -2,6 +2,7 @@ package distribunted_client
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"strings"
@@ -36,16 +37,19 @@ func (self *Client) Call(method string, ret interface{}, params ...interface{}) 
 	p := pool.GetPeer(self.pool, self.name)
 	c := 0
 	for {
-		c++
 		host, err := p.GetNextHost()
-
+		//	log.Println("choose host", host)
 		if err != nil {
 			return yar.NewError(yar.ErrorNetwork, err.Error())
 		}
 
-		if p.Len() <= c {
+		hostLen := p.Len()
+		if hostLen <= c {
 			break
 		}
+		c++
+
+		failLen := len(p.FailHost())
 
 		u := fmt.Sprintf("%s://%s/%s", self.protocol, host, self.path)
 		c, aerr := client.NewClient(u)
@@ -61,15 +65,16 @@ func (self *Client) Call(method string, ret interface{}, params ...interface{}) 
 		mils := int(end.Sub(now).Seconds() * 1000)
 
 		if e == nil {
-			monitor.SetServiceMonitor(self.pool, self.name, opt.Provider, mils, true)
+			monitor.SetServiceMonitor(self.pool, self.name, opt.Provider, mils, hostLen, failLen, true)
 			p.Reset(host)
 			return nil
 		}
 
-		monitor.SetServiceMonitor(self.pool, self.name, opt.Provider, mils, false)
+		monitor.SetServiceMonitor(self.pool, self.name, opt.Provider, mils, hostLen, failLen, false)
 
 		//mismatch service name or host down
 		if e.Assert(yar.ErrorNetwork) && strings.Contains(e.String(), "connection refused") || (e.Assert(yar.ErrorProtocol) && strings.Contains(e.String(), "mismatch service name")) {
+			log.Println("connection service error:", self.pool, self.name, e.String())
 			p.SetFail(host)
 		} else {
 			p.Reset(host)

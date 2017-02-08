@@ -10,14 +10,16 @@ import (
 )
 
 type MonitorData struct {
-	Pool         string
-	Name         string
-	Provider     string
-	RequestTime  int
-	IsSuccess    bool
-	Time         int
-	SuccessTotal int
-	FailTotal    int
+	Pool          string
+	Name          string
+	Provider      string
+	RequestTime   int
+	IsSuccess     bool
+	Time          int
+	SuccessTotal  int
+	FailTotal     int
+	HostTotal     int
+	DownHostTotal int
 }
 
 type RealTimeMonitorHandle func(pool, name, addr string, msg string)
@@ -50,7 +52,7 @@ func Setup(redisHost string, h RealTimeMonitorHandle) {
 	go SyncLogToRedis()
 }
 
-func SetServiceMonitor(pool, name, provider string, requestTime int, isSuccess bool) {
+func SetServiceMonitor(pool, name, provider string, requestTime int, healthHostTotal int, downHostTotal int, isSuccess bool) {
 
 	if redisClient == nil {
 		return
@@ -60,12 +62,14 @@ func SetServiceMonitor(pool, name, provider string, requestTime int, isSuccess b
 	t = t - (t % 30)
 
 	monitor := &MonitorData{
-		Pool:        pool,
-		Name:        name,
-		Provider:    provider,
-		RequestTime: requestTime,
-		IsSuccess:   isSuccess,
-		Time:        t,
+		Pool:          pool,
+		Name:          name,
+		Provider:      provider,
+		RequestTime:   requestTime,
+		IsSuccess:     isSuccess,
+		HostTotal:     healthHostTotal,
+		DownHostTotal: downHostTotal,
+		Time:          t,
 	}
 
 	if isSuccess {
