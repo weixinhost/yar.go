@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	defaultSyncInterval = 2 //默认从redis同步的时间
+	defaultSyncInterval = 5 //默认从redis同步的时间
 )
 
 type hostAnalytics struct {
@@ -78,8 +78,7 @@ func (p *Peer) SyncHostList(list []string) {
 }
 
 func (p *Peer) Alerm(addr string, msg string) {
-
-	monitor.RealTimeMonitor(p.pool, p.name, addr, msg)
+	go monitor.RealTimeMonitor(p.pool, p.name, addr, msg)
 }
 
 func (p *Peer) syncHostList() {
@@ -90,16 +89,6 @@ func (p *Peer) syncHostList() {
 		p.hostList = lst
 		p.lastSyncTime = time.Now()
 	}
-
-	/*
-		p.hostList = []string{
-			"127.0.0.1:8501",
-			"127.0.0.1:8502",
-			"127.0.0.1:8503",
-			"127.0.0.1:8504",
-		}
-	*/
-
 }
 
 func (p *Peer) SetFail(ip string) {
@@ -184,5 +173,4 @@ func (p *Peer) isAllow(ip string) bool {
 	}
 
 	return false
-
 }

@@ -22,9 +22,17 @@ var redisClient *redis.Client
 var redisPrefix string = "__yar_host_sync__:"
 
 var hostCheckSum map[string]string
+var httpClient *http.Client
 
 func init() {
 	hostCheckSum = make(map[string]string)
+	httpClient = &http.Client{}
+	httpClient.Timeout = 5 * time.Second
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	tr.DisableKeepAlives = true
+	httpClient.Transport = tr
 }
 
 func SetDockerAPI(api string) {
@@ -65,15 +73,6 @@ func GetHostListFromDockerAPI(pool string, name string) ([]string, error) {
 	}
 
 	api := fmt.Sprintf(`%s/containers/json?all=1&filters=%s`, dockerAPI, string(query))
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	tr.DisableKeepAlives = true
-
-	httpClient := &http.Client{}
-	httpClient.Timeout = 5 * time.Second
-	httpClient.Transport = tr
-
 	resp, err := httpClient.Get(api)
 	if err != nil {
 		return nil, err
@@ -218,15 +217,6 @@ func SetHostListToRedis(pool, name string, list []string) error {
 func SyncAllHostList() error {
 
 	api := fmt.Sprintf(`%s/containers/json`, dockerAPI)
-
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	tr.DisableKeepAlives = true
-
-	httpClient := &http.Client{}
-	httpClient.Timeout = 5 * time.Second
-	httpClient.Transport = tr
 
 	resp, err := httpClient.Get(api)
 	if err != nil {
