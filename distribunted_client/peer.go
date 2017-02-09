@@ -27,8 +27,8 @@ type Peer struct {
 	hostList      []string
 	lastSyncTime  time.Time
 	failAnalytics map[string]*hostAnalytics
-	failMutex     sync.Mutex
-	hostMutext    sync.Mutex
+	failMutex     sync.RWMutex
+	hostMutext    sync.RWMutex
 	syncMutex     sync.Mutex
 	sync          bool
 	hostLastIndex int
@@ -46,18 +46,17 @@ func NewPeer(pool, name string) *Peer {
 
 func (p *Peer) FailHost() []string {
 	var fail []string
-	p.hostMutext.Lock()
+	p.hostMutext.RLock()
 	for _, v := range p.hostList {
 		if !p.isAllow(v) {
 			fail = append(fail, v)
 		}
 	}
-	p.hostMutext.Unlock()
+	p.hostMutext.RUnlock()
 	return fail
 }
 
 func (p *Peer) GetNextHost() (string, error) {
-
 	now := time.Now()
 	if int(now.Sub(p.lastSyncTime).Seconds()) > defaultSyncInterval {
 		go p.syncHostList()
@@ -67,29 +66,38 @@ func (p *Peer) GetNextHost() (string, error) {
 		s, _ := json.Marshal(p.hostList)
 		log.Printf("[Yar Debug]: %s %s host list: %s, last sync:%s", p.pool, p.name, string(s), now.Sub(p.lastSyncTime).String())
 	}
-
+	p.hostMutext.RLock()
+	defer p.hostMutext.RUnlock()
 	if len(p.hostList) < 1 {
 		msg := fmt.Sprintf(" Pool:%s \n Yar Service: %s \n No Host Found", p.pool, p.name)
 		p.Alerm("", msg)
 		return "", errors.New("Host Not Found")
 	}
-	p.hostMutext.Lock()
-	defer p.hostMutext.Unlock()
 	first := p.hostLastIndex
+	tryCount := 0
 	for {
-		next := p.hostLastIndex % len(p.hostList)
-		p.hostLastIndex++
-		ip := p.hostList[next]
+		if tryCount >= len(p.hostList) {
+			break
+		}
+		l := len(p.hostList)
+		if l < 1 {
+			break
+		}
+		current := p.hostLastIndex % l
+		p.hostLastIndex = (current + 1) % l
+		ip := p.hostList[current]
 		if p.isAllow(ip) {
 			return ip, nil
 		}
 		if p.hostLastIndex == first {
 			break
 		}
+		tryCount++
 	}
 	msg := fmt.Sprintf(" Pool:%s \n Yar Service: %s \n No Health Host Found", p.pool, p.name)
 	p.Alerm("", msg)
 	return "", errors.New("No Health Host Found")
+
 }
 
 func (p *Peer) SyncHostList(list []string) {
@@ -103,11 +111,10 @@ func (p *Peer) Alerm(addr string, msg string) {
 }
 
 func (p *Peer) syncHostList() {
+
 	if p.sync {
 		return
 	}
-	p.syncMutex.Lock()
-	defer p.syncMutex.Unlock()
 
 	p.sync = true
 
@@ -115,8 +122,8 @@ func (p *Peer) syncHostList() {
 	if err == nil {
 		p.hostMutext.Lock()
 		p.hostList = lst
-		p.lastSyncTime = time.Now()
 		p.hostMutext.Unlock()
+		p.lastSyncTime = time.Now()
 	}
 	p.sync = false
 }
@@ -152,10 +159,9 @@ func (p *Peer) Len() int {
 
 **/
 func (p *Peer) isAllow(ip string) bool {
-
-	p.failMutex.Lock()
+	p.failMutex.RLock()
 	a := p.failAnalytics[ip]
-	p.failMutex.Unlock()
+	p.failMutex.RUnlock()
 	var c int
 	var t time.Time
 

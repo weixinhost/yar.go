@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,11 +26,16 @@ var redisPrefix string = "__yar_host_sync__:"
 var hostCheckSum map[string]string
 var hostLencache map[string]int
 var nohostCache map[string]int
+var lastsyncApi map[string]time.Time
+var syncMutext sync.Mutex
 var nohostMutex sync.Mutex
 var httpClient *http.Client
 
 func init() {
 	hostCheckSum = make(map[string]string)
+	nohostCache = make(map[string]int)
+	hostLencache = make(map[string]int)
+	lastsyncApi = make(map[string]time.Time)
 	httpClient = &http.Client{}
 	httpClient.Timeout = 5 * time.Second
 	tr := &http.Transport{
@@ -59,6 +65,16 @@ func SetRedisHost(host string) {
 }
 
 func GetHostListFromDockerAPI(pool string, name string) ([]string, error) {
+	now := time.Now()
+	syncMutext.Lock()
+	k := pool + "_" + name
+	n := lastsyncApi[k]
+	if now.Sub(n).Seconds() < 30.0 {
+		syncMutext.Unlock()
+		return nil, errors.New("black opt")
+	}
+	lastsyncApi[k] = now
+	syncMutext.Unlock()
 
 	if len(dockerAPI) < 1 {
 		return nil, errors.New("Please Call SetDockerAPI()")
@@ -155,6 +171,10 @@ func GetHostListFromDockerAPI(pool string, name string) ([]string, error) {
 	delete(nohostCache, key)
 	for _, item := range lstContainers {
 		ports, ok := item["Ports"].([]interface{})
+		if len(ports) > 1 {
+			log.Printf("[GetHostListFromDockerAPI] %s %s mapping multi port\n", pool, name)
+			continue
+		}
 		if ok {
 			if len(ports) > 0 {
 				p, ok := ports[0].(map[string]interface{})
@@ -196,7 +216,6 @@ func GetHostListFromRedis(pool string, name string) ([]string, error) {
 func GetHostList(pool string, name string) ([]string, error) {
 
 	lst, err := GetHostListFromRedis(pool, name)
-
 	if err == nil {
 		return lst, nil
 	}
@@ -283,7 +302,12 @@ func SyncAllHostList() error {
 		}
 
 		ports, ok := item["Ports"].([]interface{})
+
 		if ok {
+			if len(ports) > 1 {
+				log.Printf("[SyncAllHostList] %s %s mapping multi port\n", pool, service)
+				continue
+			}
 			if len(ports) > 0 {
 				p, ok := ports[0].(map[string]interface{})
 				if ok {
@@ -302,7 +326,7 @@ func SyncAllHostList() error {
 		changed := 0
 		for service, hostList := range lst1 {
 			SetHostListToRedis(pool, service, hostList)
-			key := fmt.Sprintf("%s_%s", pool, service)
+			key := fmt.Sprintf("%s %s", pool, service)
 			sum := hostCheckSum[key]
 			n, _ := json.Marshal(hostList)
 			s := hex.EncodeToString(n[:])
@@ -311,10 +335,42 @@ func SyncAllHostList() error {
 			}
 			log.Printf("[SyncAllHostList] changed service:%s %s %d to %d", pool, service, hostLencache[key], len(hostList))
 			hostCheckSum[key] = s
-			hostLencache[key] = len(service)
+			hostLencache[key] = len(hostList)
 			changed++
 		}
 		log.Printf("[SyncAllHostList] %s services:%d changed:%d", pool, len(lst1), changed)
+	}
+
+	for key, _ := range hostCheckSum {
+		hasContainer := false
+		e := strings.Split(key, " ")
+		s := e[1]
+		p := e[0]
+		for pool, lst1 := range list {
+			if pool != p {
+				continue
+			}
+			for service, _ := range lst1 {
+				if s != service {
+					continue
+				}
+				hasContainer = true
+				goto end
+			}
+		}
+	end:
+
+		if hasContainer == false {
+			log.Printf("[SyncAllHostList] service:%s %s no containers\n", p, s)
+			nt := nohostCache[key]
+			nohostCache[key] = nt + 1
+			if nt > 3 {
+				log.Printf("[SyncAllHostList] shutdown service: %s %s\n", p, s)
+				SetHostListToRedis(p, s, []string{})
+				delete(hostCheckSum, key)
+				delete(nohostCache, key)
+			}
+		}
 	}
 	return nil
 }

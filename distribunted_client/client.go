@@ -44,6 +44,7 @@ func NewClient(protocol, pool, name, path string) *Client {
 	c.pool = pool
 	c.path = path
 	c.Opt = yar.NewOpt()
+	c.Opt.DNSCache = false
 	return c
 }
 
@@ -52,6 +53,10 @@ func (self *Client) Call(method string, ret interface{}, params ...interface{}) 
 	c := 0
 	for {
 		host, err := p.GetNextHost()
+
+		if mode == modeDebug && err != nil {
+			log.Printf("[Yar Debug]: %s %s GetNextHost() error:%s\n", self.pool, self.name, err.Error())
+		}
 		if err != nil {
 			return yar.NewError(yar.ErrorNetwork, err.Error())
 		}
@@ -65,7 +70,7 @@ func (self *Client) Call(method string, ret interface{}, params ...interface{}) 
 		failLen := len(p.FailHost())
 
 		if mode == modeDebug {
-			log.Printf("[Yar Debug]: %s %s current: %s ,host total: %d ,fail host total:%d\n", self.pool, self.name, host, hostLen, failLen)
+			log.Printf("[Yar Debug]: %s %s method:%s current: %s ,host total: %d ,fail host total:%d\n", self.pool, self.name, method, host, hostLen, failLen)
 		}
 
 		u := fmt.Sprintf("%s://%s/%s", self.protocol, host, self.path)
@@ -85,6 +90,10 @@ func (self *Client) Call(method string, ret interface{}, params ...interface{}) 
 			monitor.SetServiceMonitor(self.pool, self.name, opt.Provider, mils, hostLen, failLen, true)
 			p.Reset(host)
 			return nil
+		}
+
+		if mode == modeDebug {
+			log.Printf("[Yar Debug]: %s %s Call Method %s() error:%s\n", self.pool, self.name, method, e.String())
 		}
 
 		monitor.SetServiceMonitor(self.pool, self.name, opt.Provider, mils, hostLen, failLen, false)
