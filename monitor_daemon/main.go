@@ -194,6 +194,10 @@ func syncList(dataList []*monitor.MonitorData) {
 						"Value": v.Pool,
 					},
 					map[string]interface{}{
+						"Name":  "Name",
+						"Value": v.Name,
+					},
+					map[string]interface{}{
 						"Name":  "State",
 						"Value": "Running",
 					},
@@ -214,6 +218,10 @@ func syncList(dataList []*monitor.MonitorData) {
 					map[string]interface{}{
 						"Name":  "Pool",
 						"Value": v.Pool,
+					},
+					map[string]interface{}{
+						"Name":  "Name",
+						"Value": v.Name,
 					},
 					map[string]interface{}{
 						"Name":  "State",

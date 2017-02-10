@@ -69,7 +69,7 @@ func (p *Peer) GetNextHost() (string, error) {
 	p.hostMutext.RLock()
 	defer p.hostMutext.RUnlock()
 	if len(p.hostList) < 1 {
-		msg := fmt.Sprintf(" Pool:%s \n Yar Service: %s \n No Host Found", p.pool, p.name)
+		msg := fmt.Sprintf(" Pool: %s \n Yar Service: %s \n No Host Found", p.pool, p.name)
 		p.Alerm("", msg)
 		return "", errors.New("Host Not Found")
 	}
@@ -94,7 +94,7 @@ func (p *Peer) GetNextHost() (string, error) {
 		}
 		tryCount++
 	}
-	msg := fmt.Sprintf(" Pool:%s \n Yar Service: %s \n No Health Host Found", p.pool, p.name)
+	msg := fmt.Sprintf(" Pool: %s \n Yar Service: %s \n No Health Host Found", p.pool, p.name)
 	p.Alerm("", msg)
 	return "", errors.New("No Health Host Found")
 

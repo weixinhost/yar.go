@@ -14,7 +14,9 @@ import (
 )
 
 const (
-	modeDebug int = 1
+	modeDebug              int = 1
+	clientModeDistribunted int = 1
+	clientModeURL          int = 2
 )
 
 var mode int
@@ -34,6 +36,8 @@ type Client struct {
 	name     string
 	path     string
 	protocol string
+	url      string
+	mode     int
 	Opt      *yar.Opt
 }
 
@@ -45,10 +49,20 @@ func NewClient(protocol, pool, name, path string) *Client {
 	c.path = path
 	c.Opt = yar.NewOpt()
 	c.Opt.DNSCache = false
+	c.mode = clientModeDistribunted
 	return c
 }
 
-func (self *Client) Call(method string, ret interface{}, params ...interface{}) *yar.Error {
+func NewClientWithUrl(url string) *Client {
+	c := new(Client)
+	c.url = url
+	c.mode = clientModeURL
+	c.Opt = yar.NewOpt()
+	return c
+}
+
+func (self *Client) distribuntedCall(method string, ret interface{}, params ...interface{}) *yar.Error {
+
 	p := pool.GetPeer(self.pool, self.name)
 	c := 0
 	for {
@@ -57,6 +71,7 @@ func (self *Client) Call(method string, ret interface{}, params ...interface{}) 
 		if mode == modeDebug && err != nil {
 			log.Printf("[Yar Debug]: %s %s GetNextHost() error:%s\n", self.pool, self.name, err.Error())
 		}
+
 		if err != nil {
 			return yar.NewError(yar.ErrorNetwork, err.Error())
 		}
@@ -108,6 +123,26 @@ func (self *Client) Call(method string, ret interface{}, params ...interface{}) 
 		}
 	}
 	return yar.NewError(yar.ErrorNetwork, "No Health Service Found.")
+}
+
+func (self *Client) urlCall(method string, ret interface{}, params ...interface{}) *yar.Error {
+	c, e := client.NewClient(self.url)
+	if e != nil {
+		return e
+	}
+	return c.Call(method, ret, params...)
+}
+
+func (self *Client) Call(method string, ret interface{}, params ...interface{}) *yar.Error {
+
+	switch self.mode {
+	case clientModeDistribunted:
+		return self.distribuntedCall(method, ret, params...)
+	case clientModeURL:
+		return self.urlCall(method, ret, params...)
+	default:
+		return yar.NewError(yar.ErrorProtocol, "unsupported opt")
+	}
 }
 
 func Setup(dockerAPI, redisHost string, h monitor.RealTimeMonitorHandle) {
