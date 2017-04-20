@@ -198,7 +198,7 @@ func (server *Server) call(request *yar.Request, response *yar.Response) {
 
 			if i >= len(call_params) {
 				tv := fv.Type().In(i).Kind()
-				if tv == reflect.Ptr || tv == reflect.Map || tv == reflect.Array || reflect.Interface == tv {
+				if tv == reflect.Ptr || reflect.Interface == tv {
 					real_params[i] = reflect.New(fv.Type().In(i))
 				} else {
 					real_params[i] = reflect.Zero(fv.Type().In(i))
@@ -207,7 +207,7 @@ func (server *Server) call(request *yar.Request, response *yar.Response) {
 			}
 
 			tv := fv.Type().In(i).Kind()
-			if tv == reflect.Ptr || tv == reflect.Map || tv == reflect.Array || reflect.Interface == tv {
+			if tv == reflect.Ptr || reflect.Interface == tv {
 				real_params[i] = reflect.New(fv.Type().In(i))
 			}
 
