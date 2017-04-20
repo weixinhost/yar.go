@@ -65,7 +65,7 @@ func (server *Server) Handle(body []byte, writer io.Writer) *yar.Error {
 	server.call(request, response)
 	server.sendResponse(response)
 	if response.Status != yar.ERR_OKEY {
-		server.log(yar.LogLevelError, "[YarCall] %d %s Error:%s\n", request.Id, request.Method, response.Error)
+		server.log(yar.LogLevelError, "[YarCall] %d %s Error:%s Param:%+v\n", request.Id, request.Method, response.Error, request.Params)
 		return yar.NewError(yar.ErrorResponse, response.Error)
 	} else {
 		server.log(yar.LoglevelNormal, "[YarCall] %d %s %s\n", request.Id, request.Method, "OKEY")
