@@ -237,6 +237,10 @@ func (client *Client) httpHandler(method string, ret interface{}, params ...inte
 	request.Header.SetMethod("POST")
 	request.SetConnectionClose()
 
+	if client.Opt.Gzip {
+		request.Header.Set("Accept-Encoding", `gzip`)
+	}
+
 	var resp fasthttp.Response
 
 	postErr := hClient.DoTimeout(&request, &resp, time.Duration(client.Opt.Timeout)*time.Millisecond)
@@ -244,7 +248,23 @@ func (client *Client) httpHandler(method string, ret interface{}, params ...inte
 	if postErr != nil {
 		return yar.NewError(yar.ErrorNetwork, postErr.Error())
 	}
-	body := bytes.NewBuffer(resp.Body())
+
+	var b []byte
+	var e error
+
+	if client.Opt.Gzip && strings.Contains(resp.Header.String(), "Content-Encoding: gzip") {
+
+		b, e = resp.BodyGunzip()
+
+		if e != nil {
+			b = resp.Body()
+		}
+	} else {
+		b = resp.Body()
+	}
+
+	body := bytes.NewBuffer(b)
+
 	responseErr := client.readResponse(body, ret)
 	return responseErr
 }
