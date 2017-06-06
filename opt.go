@@ -36,7 +36,8 @@ type Opt struct {
 	DynamicParam      bool
 	DNSCache          bool
 	LogLevel          int
-	Gzip              bool
+	AcceptGzip        bool
+	RequestGzip       bool
 }
 
 func NewOpt() *Opt {
@@ -51,7 +52,8 @@ func NewOpt() *Opt {
 	opt.DNSCache = true
 	opt.LogLevel = LogLevelError
 	opt.CheckRequest = false
-	opt.Gzip = false
+	opt.AcceptGzip = false
+	opt.RequestGzip = false
 	return opt
 }
 

@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"compress/gzip"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -232,13 +233,40 @@ func (client *Client) httpHandler(method string, ret interface{}, params ...inte
 	}
 
 	request := fasthttp.Request{}
-	request.SetBody(postBuffer.Bytes())
+
+	if client.Opt.RequestGzip {
+
+		var buf bytes.Buffer
+		g := gzip.NewWriter(&buf)
+
+		_, gzipErr := g.Write(postBuffer.Bytes())
+
+		if gzipErr != nil {
+			return yar.NewError(yar.ErrorNetwork, gzipErr.Error())
+		}
+
+		gzipErr = g.Close()
+
+		if gzipErr != nil {
+			return yar.NewError(yar.ErrorNetwork, gzipErr.Error())
+		}
+
+		request.SetBody(buf.Bytes())
+
+	} else {
+		request.SetBody(postBuffer.Bytes())
+	}
+
 	request.SetRequestURI(client.hostname)
 	request.Header.SetMethod("POST")
 	request.SetConnectionClose()
 
-	if client.Opt.Gzip {
+	if client.Opt.AcceptGzip {
 		request.Header.Set("Accept-Encoding", `gzip`)
+	}
+
+	if client.Opt.RequestGzip {
+		request.Header.Set("Content-Encoding", "gzip")
 	}
 
 	var resp fasthttp.Response
@@ -252,7 +280,7 @@ func (client *Client) httpHandler(method string, ret interface{}, params ...inte
 	var b []byte
 	var e error
 
-	if client.Opt.Gzip && strings.Contains(resp.Header.String(), "Content-Encoding: gzip") {
+	if client.Opt.AcceptGzip && strings.Contains(resp.Header.String(), "Content-Encoding: gzip") {
 
 		b, e = resp.BodyGunzip()
 
