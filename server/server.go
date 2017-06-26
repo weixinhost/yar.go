@@ -11,23 +11,76 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/load"
+	"github.com/shirou/gopsutil/mem"
 	"github.com/weixinhost/yar.go"
 	"github.com/weixinhost/yar.go/packager"
 )
 
+type SystemClass struct {
+}
+
+func (this *SystemClass) Stats() interface{} {
+
+	stats := make(map[string]interface{}, 0)
+
+	cpuPercent, err := cpu.Percent(0, false)
+
+	if err != nil {
+		log.Println(err)
+		stats["cpu"] = -1
+	} else {
+
+		if len(cpuPercent) > 0 {
+			stats["cpu"] = cpuPercent[0]
+		} else {
+			stats["cpu"] = -1
+		}
+	}
+
+	memStats, err := mem.VirtualMemory()
+
+	if err != nil {
+		log.Println(err)
+		stats["mem"] = -1
+	} else {
+		stats["mem"] = memStats.UsedPercent
+	}
+
+	loadStats, err := load.Avg()
+
+	if err != nil {
+		log.Println(err)
+		stats["load"] = -1
+	} else {
+		stats["load"] = loadStats
+	}
+
+	return stats
+}
+
 type Server struct {
-	class     interface{}
-	methodMap map[string]string
-	body      []byte
-	Opt       *yar.Opt
-	writer    io.Writer
+	class       interface{}
+	systemClass interface{}
+	methodMap   map[string]string
+	body        []byte
+	Opt         *yar.Opt
+	writer      io.Writer
 }
 
 func NewServer(class interface{}) *Server {
+
+	systemClass := new(SystemClass)
+
 	server := new(Server)
 	server.class = class
+	server.systemClass = systemClass
 	server.methodMap = make(map[string]string, 32)
 	server.Opt = yar.NewOpt()
+
+	server.Register("yar_system_stats", "Stats")
+
 	return server
 }
 
@@ -169,13 +222,24 @@ func (server *Server) call(request *yar.Request, response *yar.Response) {
 		_, err = class_fv.Type().MethodByName(methodMap)
 	}
 
-	if err == false {
-		response.Status = yar.ERR_EMPTY_RESPONSE
-		response.Error = "call undefined api:" + request.Method
-		return
-	}
+	var fv reflect.Value
 
-	fv := class_fv.MethodByName(methodMap)
+	if err == false {
+
+		class_sysfv := reflect.ValueOf(server.systemClass)
+
+		_, err = class_sysfv.Type().MethodByName(methodMap)
+
+		if err == false {
+			response.Status = yar.ERR_EMPTY_RESPONSE
+			response.Error = "call undefined api:" + request.Method
+			return
+		} else {
+			fv = class_sysfv.MethodByName(methodMap)
+		}
+	} else {
+		fv = class_fv.MethodByName(methodMap)
+	}
 
 	var real_params []reflect.Value
 
