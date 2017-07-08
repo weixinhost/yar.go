@@ -46,8 +46,8 @@ func (server *HttpServer) RegisterHandle(path string, h InitServer) {
 func (server *HttpServer) Serve(addr string) {
 	printlnWelcome()
 	log.Println("Start Yar Server:" + addr)
-
-	err := fasthttp.ListenAndServe(addr, server.innerHandle)
+	h := fasthttp.CompressHandler(server.innerHandle)
+	err := fasthttp.ListenAndServe(addr, h)
 
 	if err != nil {
 		log.Println("Start Yar Server Error:" + err.Error())
@@ -64,7 +64,18 @@ func (server *HttpServer) innerHandle(ctx *fasthttp.RequestCtx) {
 		}
 	}()
 
-	body := ctx.PostBody()
+	var body []byte
+
+	if (string)(ctx.Request.Header.Peek("Content-Encoding")) == "gzip" {
+		temp, err := ctx.Request.BodyGunzip()
+		if err != nil {
+			log.Println("Parse Body In Gunzip failed:" + err.Error())
+			return
+		}
+		body = temp
+	} else {
+		body = ctx.PostBody()
+	}
 	p := ctx.Path()
 	path := string(p)
 
@@ -84,20 +95,21 @@ func (server *HttpServer) innerHandle(ctx *fasthttp.RequestCtx) {
 	if yarErr != nil {
 		log.Println("Yar Server Handle Error:" + yarErr.String())
 	}
-
 	bufBody := buf.Bytes()
-
-	offset := 0
-
+	var err error
+	current := 0
 	for {
-		n, err := ctx.Write(bufBody[offset:])
+		n, err := ctx.Write(bufBody[current:])
 		if err != nil {
-			log.Println("Yar Server Write Error:" + err.Error())
 			break
 		}
-		offset += n
-		if offset >= len(bufBody) {
+		current += n
+		if current >= len(bufBody) {
 			break
 		}
+	}
+
+	if err != nil {
+		log.Println("Yar Server Send Error:" + err.Error())
 	}
 }

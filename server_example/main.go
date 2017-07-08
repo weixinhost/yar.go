@@ -15,7 +15,9 @@ func main() {
 	httpServer := server.NewHttpServer()
 	//注册路由
 	httpServer.RegisterHandle("/", func() *server.Server {
-		return server.NewServer(&YarClass{})
+		server := server.NewServer(&YarClass{})
+		server.Register("echo", "Echo")
+		return server
 	})
 	//启动Serve
 	httpServer.Serve(":8080")

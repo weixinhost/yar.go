@@ -25,12 +25,13 @@ func main() {
 	client.Opt.EncryptPrivateKey = ""
 	//这是默认值
 	client.Opt.MagicNumber = yar.MagicNumber
-
+	//	client.Opt.AcceptGzip = true
+	client.Opt.RequestGzip = true
 	//	param := 1
 
 	var ret interface{}
 
-	callErr := client.Call("echo", &ret)
+	callErr := client.Call("echo", &ret, "123")
 
 	if callErr != nil {
 		fmt.Println("error", callErr)

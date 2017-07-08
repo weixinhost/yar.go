@@ -280,10 +280,8 @@ func (client *Client) httpHandler(method string, ret interface{}, params ...inte
 	var b []byte
 	var e error
 
-	if client.Opt.AcceptGzip && strings.Contains(resp.Header.String(), "Content-Encoding: gzip") {
-
+	if (string)(resp.Header.Peek("Content-Encoding")) == "gzip" {
 		b, e = resp.BodyGunzip()
-
 		if e != nil {
 			b = resp.Body()
 		}
