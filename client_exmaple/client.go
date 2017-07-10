@@ -9,7 +9,7 @@ import (
 
 func main() {
 
-	client, err := client.NewClient("http://127.0.0.1:8080")
+	client, err := client.NewClient("http://127.0.0.1:8080/api")
 
 	if err != nil {
 		fmt.Println("error", err)
@@ -25,7 +25,7 @@ func main() {
 	client.Opt.EncryptPrivateKey = ""
 	//这是默认值
 	client.Opt.MagicNumber = yar.MagicNumber
-	//	client.Opt.AcceptGzip = true
+	client.Opt.AcceptGzip = true
 	client.Opt.RequestGzip = true
 	//	param := 1
 
