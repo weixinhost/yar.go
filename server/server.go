@@ -89,6 +89,10 @@ func (server *Server) Register(rpcName string, methodName string) {
 	server.methodMap[strings.ToLower(rpcName)] = methodName
 }
 
+func (server *Server) RegisterAll(methods map[string]string) {
+	server.methodMap = methods
+}
+
 func (server *Server) Handle(body []byte, writer io.Writer) *yar.Error {
 	server.body = body
 	server.writer = writer
