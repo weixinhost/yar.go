@@ -27,20 +27,27 @@ func printlnWelcome() {
 
 type Handle func(body []byte, writer io.Writer)
 
+type DirectHandle func(*fasthttp.RequestCtx, []byte, io.Writer)
 type InitServer func() *Server
 
 type HttpServer struct {
-	handle map[string]InitServer
+	handle       map[string]InitServer
+	directHandle map[string]DirectHandle
 }
 
 func NewHttpServer() *HttpServer {
 	server := new(HttpServer)
 	server.handle = make(map[string]InitServer, 0)
+	server.directHandle = make(map[string]DirectHandle, 0)
 	return server
 }
 
 func (server *HttpServer) RegisterHandle(path string, h InitServer) {
 	server.handle[path] = h
+}
+
+func (server *HttpServer) RegisterDirectHandle(path string, h DirectHandle) {
+	server.directHandle[path] = h
 }
 
 func (server *HttpServer) Serve(addr string) {
@@ -79,21 +86,23 @@ func (server *HttpServer) innerHandle(ctx *fasthttp.RequestCtx) {
 	p := ctx.Path()
 	path := string(p)
 
-	hf, ok := server.handle[path]
-
-	if !ok {
-		log.Println("No Yar Server Found On Path:" + path)
-		return
-	}
-
-	h := hf()
-
 	buf := bytes.NewBufferString("")
 
-	yarErr := h.Handle(body, buf)
+	if h, ok := server.directHandle[path]; ok {
+		h(ctx, body, buf)
+	} else {
+		hf, ok := server.handle[path]
 
-	if yarErr != nil {
-		log.Println("Yar Server Handle Error:" + yarErr.String())
+		if !ok {
+			log.Println("No Yar Server Found On Path:" + path)
+			return
+		}
+		h := hf()
+		yarErr := h.Handle(body, buf)
+
+		if yarErr != nil {
+			log.Println("Yar Server Handle Error:" + yarErr.String())
+		}
 	}
 	bufBody := buf.Bytes()
 	var err error
