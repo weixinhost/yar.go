@@ -1,9 +1,11 @@
 package packager
 
 import (
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"strings"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func JsonPack(v interface{}) ([]byte, error) {
 	data, err := json.Marshal(v)
