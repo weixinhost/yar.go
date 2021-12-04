@@ -232,6 +232,8 @@ func (client *Client) httpHandler(method string, ret interface{}, params ...inte
 		hClient = dnsCacheHttpClient
 	}
 
+	hClient.ReadTimeout = time.Duration(client.Opt.Timeout) * time.Millisecond
+
 	request := fasthttp.Request{}
 
 	if client.Opt.RequestGzip {
